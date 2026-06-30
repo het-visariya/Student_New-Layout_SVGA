@@ -1,0 +1,1324 @@
+import { useState, useRef, useMemo, type ChangeEvent } from "react";
+import { motion } from "motion/react";
+import {
+  BookOpen, User, LayoutDashboard, Search, Check, Download,
+  CheckCircle, LogOut, CreditCard, Smartphone, Camera, X,
+  Shield, Clock, BookMarked, FileText, ChevronRight, Wallet,
+  Settings, RefreshCw, Library, QrCode,
+} from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Screen = "login" | "register" | "dashboard" | "browse" | "requests" | "account";
+type RegStep = 1 | 2 | 3;
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+const STUDENT = {
+  name: "Rahul Sharma",
+  id: "SVGA2024001",
+  course: "B.Tech Computer Science",
+  year: "3rd Year",
+  college: "SVGA Engineering College",
+  email: "rahul.sharma@svga.edu.in",
+  mobile: "9876543210",
+  aadhaar: "XXXX XXXX 4521",
+  memberSince: "Jan 2024",
+};
+
+const BOOKS = [
+  { id: "b1", title: "Engineering Mathematics", author: "B.S. Grewal", course: "B.Tech", subject: "Mathematics", available: 3 },
+  { id: "b2", title: "Data Structures & Algorithms", author: "Ellis Horowitz", course: "B.Tech CS", subject: "Computer Science", available: 1 },
+  { id: "b3", title: "Operating System Concepts", author: "Abraham Silberschatz", course: "B.Tech CS", subject: "Computer Science", available: 2 },
+  { id: "b4", title: "Computer Networks", author: "Andrew S. Tanenbaum", course: "B.Tech CS", subject: "Computer Science", available: 0 },
+  { id: "b5", title: "Database Management Systems", author: "Ramakrishnan & Gehrke", course: "B.Tech CS", subject: "Computer Science", available: 4 },
+  { id: "b6", title: "Engineering Physics", author: "H.K. Malik", course: "B.Tech", subject: "Physics", available: 2 },
+  { id: "b7", title: "Discrete Mathematics", author: "Kenneth H. Rosen", course: "B.Tech CS", subject: "Mathematics", available: 1 },
+  { id: "b8", title: "Compiler Design", author: "Alfred V. Aho", course: "B.Tech CS", subject: "Computer Science", available: 3 },
+];
+
+const REQUESTS = [
+  { id: "REQ-2024-001", date: "15 Jan 2024", type: "Book Request", status: "Approved", books: ["Engineering Mathematics", "Engineering Physics"], challan: "CHN-001" },
+  { id: "REQ-2024-002", date: "3 Feb 2024", type: "Procurement", status: "Pending", books: ["Advanced Algorithms"], challan: null },
+  { id: "REQ-2024-003", date: "22 Feb 2024", type: "Book Request", status: "Returned", books: ["Database Management Systems"], challan: "CHN-002" },
+  { id: "REQ-2024-004", date: "10 Mar 2024", type: "Reservation", status: "Approved", books: ["Computer Networks"], challan: "CHN-003" },
+  { id: "REQ-2024-005", date: "1 Apr 2024", type: "Book Request", status: "Rejected", books: ["Quantum Computing Basics"], challan: null },
+];
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+function Logo({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={`${compact ? "w-8 h-8" : "w-10 h-10"} rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200 flex-shrink-0`}>
+        <BookOpen className={`${compact ? "w-4 h-4" : "w-5 h-5"} text-white`} />
+      </div>
+      <div>
+        <div className={`font-extrabold text-blue-700 leading-tight ${compact ? "text-sm" : "text-base"}`}>SVGA</div>
+        <div className={`text-slate-400 font-semibold uppercase tracking-widest leading-tight ${compact ? "text-[8px]" : "text-[9px]"}`}>Book Bank</div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    Approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Pending: "bg-amber-50 text-amber-700 border-amber-200",
+    Returned: "bg-slate-100 text-slate-600 border-slate-200",
+    Rejected: "bg-red-50 text-red-600 border-red-200",
+    Active: "bg-blue-50 text-blue-700 border-blue-200",
+    Procured: "bg-purple-50 text-purple-700 border-purple-200",
+  };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${styles[status] ?? "bg-slate-100 text-slate-500 border-slate-200"}`}>
+      {status}
+    </span>
+  );
+}
+
+function QRBlock({ size = 120 }: { size?: number }) {
+  const cells = useMemo(() => {
+    return Array.from({ length: 21 * 21 }, (_, i) => {
+      const r = Math.floor(i / 21);
+      const c = i % 21;
+      if (r < 7 && c < 7) {
+        if (r === 0 || r === 6 || c === 0 || c === 6) return 1;
+        if (r >= 2 && r <= 4 && c >= 2 && c <= 4) return 1;
+        return 0;
+      }
+      if (r < 7 && c > 13) {
+        const cc = c - 14;
+        if (r === 0 || r === 6 || cc === 0 || cc === 6) return 1;
+        if (r >= 2 && r <= 4 && cc >= 2 && cc <= 4) return 1;
+        return 0;
+      }
+      if (r > 13 && c < 7) {
+        const rr = r - 14;
+        if (rr === 0 || rr === 6 || c === 0 || c === 6) return 1;
+        if (rr >= 2 && rr <= 4 && c >= 2 && c <= 4) return 1;
+        return 0;
+      }
+      return ((i * 2654435761) >>> 0) % 3 === 0 ? 1 : 0;
+    });
+  }, []);
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: "grid",
+        gridTemplateColumns: "repeat(21, 1fr)",
+        padding: 6,
+        backgroundColor: "#fff",
+        borderRadius: 10,
+      }}
+    >
+      {cells.map((cell, i) => (
+        <div key={i} style={{ backgroundColor: cell ? "#1a1a2e" : "transparent" }} />
+      ))}
+    </div>
+  );
+}
+
+function StepBar({ step, labels }: { step: RegStep; labels: string[] }) {
+  return (
+    <div className="flex items-start justify-center gap-0 mb-8">
+      {labels.map((label, i) => (
+        <div key={label} className="flex items-start">
+          <div className="flex flex-col items-center">
+            <div
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
+                i + 1 < step
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : i + 1 === step
+                  ? "bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100"
+                  : "bg-white border-slate-200 text-slate-400"
+              }`}
+            >
+              {i + 1 < step ? <Check className="w-4 h-4" /> : i + 1}
+            </div>
+            <span
+              className={`mt-2 text-[11px] font-semibold whitespace-nowrap ${
+                i + 1 === step ? "text-blue-600" : i + 1 < step ? "text-blue-400" : "text-slate-400"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+          {i < labels.length - 1 && (
+            <div
+              className={`w-20 h-0.5 mt-[18px] mx-1 transition-all duration-300 ${
+                i + 1 < step ? "bg-blue-500" : "bg-slate-200"
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NavBar({ active, onNav }: { active: Screen; onNav: (s: Screen) => void }) {
+  const links: { key: Screen; label: string; icon: React.ReactNode }[] = [
+    { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { key: "browse", label: "Browse Books", icon: <BookOpen className="w-4 h-4" /> },
+    { key: "requests", label: "My Requests", icon: <FileText className="w-4 h-4" /> },
+    { key: "account", label: "Account", icon: <User className="w-4 h-4" /> },
+  ];
+  return (
+    <nav className="bg-white/90 backdrop-blur-md border-b border-blue-100/80 sticky top-0 z-40 shadow-sm shadow-blue-50">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
+        <Logo compact />
+        <div className="hidden md:flex items-center gap-1">
+          {links.map((l) => (
+            <button
+              key={l.key}
+              onClick={() => onNav(l.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                active === l.key
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              }`}
+            >
+              {l.icon}
+              {l.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block text-right">
+            <div className="text-sm font-bold text-slate-800 leading-tight">{STUDENT.name}</div>
+            <div className="text-[11px] text-slate-400 font-medium">{STUDENT.id}</div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+            <User className="w-4 h-4 text-blue-600" />
+          </div>
+        </div>
+      </div>
+      {/* Mobile tab row */}
+      <div className="md:hidden flex border-t border-blue-50 px-1 py-0.5">
+        {links.map((l) => (
+          <button
+            key={l.key}
+            onClick={() => onNav(l.key)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors ${
+              active === l.key ? "text-blue-600" : "text-slate-400"
+            }`}
+          >
+            {l.icon}
+            {l.label}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// ─── Screen 1: Login ──────────────────────────────────────────────────────────
+function LoginScreen({ onNext }: { onNext: () => void }) {
+  const [otpSent, setOtpSent] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50/60 to-indigo-50 flex flex-col items-center justify-center px-4 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 28 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-sm"
+      >
+        {/* Brand */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-200/70 mb-4">
+            <BookOpen className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">SVGA Book Bank</h1>
+          <p className="text-slate-400 text-sm mt-1 font-medium">Student Library Portal</p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-xl shadow-blue-100/70 border border-blue-50 p-7">
+          <h2 className="text-xl font-extrabold text-slate-800 mb-1">Student Login</h2>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            {otpSent
+              ? "Enter the 6-digit OTP sent to your registered mobile number"
+              : "Enter your Aadhaar number to receive a verification OTP"}
+          </p>
+
+          <div className="space-y-4">
+            {!otpSent ? (
+              <>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Aadhaar Number</label>
+                  <input
+                    type="text"
+                    placeholder="XXXX XXXX XXXX"
+                    maxLength={14}
+                    className="w-full px-4 py-3 bg-blue-50/70 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent transition-all text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Mobile Number</label>
+                  <div className="flex gap-2">
+                    <div className="px-3 py-3 bg-blue-50 border border-blue-100 rounded-xl text-slate-500 text-sm font-semibold select-none">
+                      +91
+                    </div>
+                    <input
+                      type="tel"
+                      placeholder="9876543210"
+                      maxLength={10}
+                      className="flex-1 px-4 py-3 bg-blue-50/70 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent transition-all text-sm"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => setOtpSent(true)}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all duration-200 hover:-translate-y-0.5 mt-1"
+                >
+                  Send OTP
+                </button>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-3">Enter OTP</label>
+                  <div className="flex gap-2 justify-center">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        maxLength={1}
+                        className="w-11 h-12 text-center bg-blue-50/70 border-2 border-blue-100 rounded-xl text-slate-800 text-lg font-bold focus:outline-none focus:border-blue-400 transition-all"
+                      />
+                    ))}
+                  </div>
+                  <p className="text-center text-xs text-slate-400 mt-2.5">
+                    OTP sent to +91 98765 43210 ·{" "}
+                    <button className="text-blue-500 font-semibold hover:text-blue-600">Resend</button>
+                  </p>
+                </div>
+                <button
+                  onClick={onNext}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  Verify &amp; Continue
+                </button>
+                <button
+                  onClick={() => setOtpSent(false)}
+                  className="w-full py-2 text-slate-400 text-sm hover:text-blue-500 transition-colors font-medium"
+                >
+                  ← Change number
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Feature pills */}
+        <div className="flex gap-2.5 justify-center mt-6 flex-wrap">
+          {[
+            { icon: <BookOpen className="w-3.5 h-3.5" />, label: "Free Books" },
+            { icon: <Shield className="w-3.5 h-3.5" />, label: "Secure OTP" },
+            { icon: <Wallet className="w-3.5 h-3.5" />, label: "₹500 Deposit" },
+          ].map((p) => (
+            <div
+              key={p.label}
+              className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-full px-3.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+            >
+              <span className="text-blue-500">{p.icon}</span>
+              {p.label}
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Screen 2–4: Registration ─────────────────────────────────────────────────
+function RegistrationScreen({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState<RegStep>(1);
+  const [showPayment, setShowPayment] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50/60 to-indigo-50 px-4 py-8">
+      {showPayment && (
+        <PaymentModal
+          onSuccess={() => {
+            setShowPayment(false);
+            setShowSuccess(true);
+          }}
+          onClose={() => setShowPayment(false)}
+        />
+      )}
+      {showSuccess && <SuccessModal onContinue={onComplete} />}
+
+      <div className="max-w-2xl mx-auto">
+        <div className="flex flex-col items-center mb-6">
+          <Logo />
+          <h1 className="text-2xl font-extrabold text-slate-800 mt-4 tracking-tight">Student Registration</h1>
+          <p className="text-slate-400 text-sm mt-1">Complete your profile to access the book bank</p>
+        </div>
+
+        <StepBar step={step} labels={["Personal Details", "Academic Info", "Profile Photo"]} />
+
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="bg-white rounded-3xl shadow-xl shadow-blue-100/60 border border-blue-50 p-8"
+        >
+          {step === 1 && <PersonalForm />}
+          {step === 2 && <AcademicForm />}
+          {step === 3 && <PhotoForm preview={photoPreview} onChange={handleFile} />}
+
+          <div className="flex gap-3 mt-8">
+            {step > 1 && (
+              <button
+                onClick={() => setStep((s) => (s - 1) as RegStep)}
+                className="flex-1 py-3 border-2 border-blue-200 text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all"
+              >
+                ← Back
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (step < 3) setStep((s) => (s + 1) as RegStep);
+                else setShowPayment(true);
+              }}
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5"
+            >
+              {step < 3 ? "Continue →" : "Proceed to Payment"}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+function FieldInput({ label, placeholder, type = "text", options, span }: { label: string; placeholder: string; type?: string; options?: string[]; span?: number }) {
+  const cls = "w-full px-4 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm";
+  return (
+    <div className={span === 2 ? "col-span-2" : ""}>
+      <label className="block text-sm font-bold text-slate-700 mb-1.5">
+        {label} <span className="text-blue-300 font-normal">*</span>
+      </label>
+      {type === "select" ? (
+        <select className={cls}>
+          <option value="">{placeholder}</option>
+          {options?.map((o) => <option key={o}>{o}</option>)}
+        </select>
+      ) : type === "textarea" ? (
+        <textarea rows={3} placeholder={placeholder} className={`${cls} resize-none`} />
+      ) : (
+        <input type={type} placeholder={placeholder} className={cls} />
+      )}
+    </div>
+  );
+}
+
+function PersonalForm() {
+  return (
+    <div>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Personal Details</h2>
+      <p className="text-slate-400 text-sm mb-6">Enter your details as per official documents</p>
+      <div className="grid grid-cols-2 gap-4">
+        <FieldInput label="Email Address" placeholder="rahul.sharma@email.com" type="email" span={2} />
+        <FieldInput label="First Name" placeholder="Rahul" />
+        <FieldInput label="Surname" placeholder="Sharma" />
+        <FieldInput label="Father's Name" placeholder="Suresh Sharma" />
+        <FieldInput label="Grandfather's Name" placeholder="Ram Sharma" />
+        <FieldInput label="Official Surname (if different)" placeholder="Optional" span={2} />
+        <FieldInput label="Aadhaar Number" placeholder="XXXX XXXX XXXX" />
+        <FieldInput label="Mobile Number" placeholder="9876543210" />
+        <FieldInput label="Date of Birth" placeholder="" type="date" />
+        <FieldInput label="Gender" placeholder="Select gender" type="select" options={["Male", "Female", "Other", "Prefer not to say"]} />
+        <FieldInput label="Occupation" placeholder="Student" />
+        <FieldInput label="Additional Information" placeholder="Any notes or special requirements" type="textarea" span={2} />
+      </div>
+    </div>
+  );
+}
+
+function AcademicForm() {
+  return (
+    <div>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Academic Details</h2>
+      <p className="text-slate-400 text-sm mb-6">Enter your academic and institutional information</p>
+      <div className="grid grid-cols-2 gap-4">
+        <FieldInput label="College / Institute" placeholder="SVGA Engineering College" span={2} />
+        <FieldInput label="Course / Stream" placeholder="B.Tech Computer Science" />
+        <FieldInput label="Standard / Year" placeholder="Select year" type="select" options={["1st Year", "2nd Year", "3rd Year", "4th Year"]} />
+        <FieldInput label="Education Specialization" placeholder="Computer Science & Engineering" />
+        <FieldInput label="Enrollment Number" placeholder="SVG20CS001" />
+        <FieldInput label="Academic Year" placeholder="Select year" type="select" options={["2023-24", "2024-25", "2025-26"]} />
+        <FieldInput label="Division" placeholder="Select" type="select" options={["A", "B", "C", "D"]} />
+        <FieldInput label="Roll Number" placeholder="42" />
+        <FieldInput label="Previous School / College" placeholder="Kendriya Vidyalaya No. 1" span={2} />
+        <FieldInput label="Additional Information" placeholder="Special requirements or notes" type="textarea" span={2} />
+      </div>
+    </div>
+  );
+}
+
+function PhotoForm({ preview, onChange }: { preview: string | null; onChange: (e: ChangeEvent<HTMLInputElement>) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex flex-col items-center">
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1 text-center">Profile Photo</h2>
+      <p className="text-slate-400 text-sm mb-8 text-center">Upload a clear passport-size photo with a white background</p>
+
+      <div className="relative mb-5">
+        <div
+          onClick={() => inputRef.current?.click()}
+          className="w-40 h-40 rounded-full border-4 border-dashed border-blue-200 bg-blue-50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-100/50 transition-all duration-200 overflow-hidden"
+        >
+          {preview ? (
+            <img src={preview} alt="Profile preview" className="w-full h-full object-cover" />
+          ) : (
+            <>
+              <Camera className="w-10 h-10 text-blue-300 mb-2" />
+              <span className="text-xs text-blue-400 font-semibold">Click to upload</span>
+            </>
+          )}
+        </div>
+        {preview && (
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="absolute bottom-1 right-1 w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors"
+          >
+            <Camera className="w-4 h-4 text-white" />
+          </button>
+        )}
+      </div>
+
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onChange} />
+
+      <button
+        onClick={() => inputRef.current?.click()}
+        className="px-7 py-2.5 border-2 border-blue-200 text-blue-700 font-bold rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all mb-7"
+      >
+        Choose Photo
+      </button>
+
+      <div className="bg-blue-50 rounded-2xl p-5 w-full">
+        <p className="text-sm font-bold text-slate-700 mb-3">Photo Requirements</p>
+        <div className="space-y-2">
+          {[
+            "Clear frontal face, no glasses or mask",
+            "White or plain light background",
+            "File size: maximum 2 MB",
+            "Format: JPG or PNG only",
+            "Recent photo taken within 6 months",
+          ].map((r) => (
+            <div key={r} className="flex items-start gap-2 text-sm text-slate-500">
+              <Check className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
+              {r}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+function PaymentModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
+  const [method, setMethod] = useState<"card" | "upi" | "net">("card");
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-7 relative"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+        >
+          <X className="w-4 h-4 text-slate-500" />
+        </button>
+
+        <div className="text-center mb-5">
+          <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <Wallet className="w-7 h-7 text-blue-600" />
+          </div>
+          <h2 className="text-xl font-extrabold text-slate-800">Complete Payment</h2>
+          <p className="text-slate-400 text-sm mt-1">One-time refundable security deposit</p>
+        </div>
+
+        <div className="bg-gradient-to-r from-blue-600 to-sky-500 rounded-2xl p-5 text-white text-center mb-5">
+          <div className="text-4xl font-extrabold">₹500</div>
+          <div className="text-blue-100 text-xs mt-1.5 flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5" /> Fully refundable deposit
+          </div>
+        </div>
+
+        <div className="flex gap-2 mb-5">
+          {(
+            [
+              { key: "card" as const, label: "Card", icon: <CreditCard className="w-3.5 h-3.5" /> },
+              { key: "upi" as const, label: "UPI", icon: <Smartphone className="w-3.5 h-3.5" /> },
+              { key: "net" as const, label: "Net Banking", icon: <Library className="w-3.5 h-3.5" /> },
+            ] as const
+          ).map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setMethod(m.key)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                method === m.key
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+            >
+              {m.icon} {m.label}
+            </button>
+          ))}
+        </div>
+
+        {method === "card" && (
+          <div className="space-y-3 mb-5">
+            <input type="text" placeholder="Card Number" className="w-full px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm" />
+            <div className="flex gap-3">
+              <input type="text" placeholder="MM / YY" className="flex-1 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm" />
+              <input type="text" placeholder="CVV" className="w-24 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm" />
+            </div>
+            <input type="text" placeholder="Cardholder Name" className="w-full px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm" />
+          </div>
+        )}
+        {method === "upi" && (
+          <div className="mb-5">
+            <input type="text" placeholder="Enter UPI ID (e.g. rahul@okaxis)" className="w-full px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm" />
+          </div>
+        )}
+        {method === "net" && (
+          <div className="mb-5">
+            <select className="w-full px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm">
+              <option value="">Select your bank</option>
+              {["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "PNB", "Bank of Baroda", "Canara Bank"].map((b) => (
+                <option key={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <button
+          onClick={onSuccess}
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5"
+        >
+          Pay ₹500 Securely
+        </button>
+        <p className="text-center text-[11px] text-slate-400 mt-3 flex items-center justify-center gap-1">
+          <Shield className="w-3 h-3" /> Secured with 256-bit SSL encryption
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+function SuccessModal({ onContinue }: { onContinue: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center"
+      >
+        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <CheckCircle className="w-10 h-10 text-emerald-500" />
+        </div>
+        <h2 className="text-2xl font-extrabold text-slate-800 mb-2">Payment Successful!</h2>
+        <p className="text-slate-400 text-sm leading-relaxed mb-6">
+          Your ₹500 deposit has been received. SVGA Book Bank membership is now active.
+        </p>
+        <div className="bg-emerald-50 rounded-2xl p-4 mb-6 text-left space-y-2.5 border border-emerald-100">
+          {[
+            { label: "Transaction ID", value: "TXN2024001342" },
+            { label: "Amount Paid", value: "₹500" },
+            { label: "Membership", value: "Active" },
+            { label: "Valid Until", value: "Dec 2024" },
+          ].map((r) => (
+            <div key={r.label} className="flex justify-between text-sm">
+              <span className="text-slate-500">{r.label}</span>
+              <span className={`font-bold ${r.label === "Amount Paid" ? "text-emerald-600" : "text-slate-800"}`}>
+                {r.value}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onContinue}
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all hover:-translate-y-0.5"
+        >
+          Go to Dashboard →
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Screen 7: Dashboard ──────────────────────────────────────────────────────
+function DashboardScreen({ onNav }: { onNav: (s: Screen) => void }) {
+  const stats = [
+    { label: "Membership", value: "Active", icon: <Shield className="w-5 h-5" />, color: "text-blue-600 bg-blue-50 border-blue-100" },
+    { label: "Total Issued", value: "3", icon: <BookOpen className="w-5 h-5" />, color: "text-violet-600 bg-violet-50 border-violet-100" },
+    { label: "Currently Held", value: "2", icon: <BookMarked className="w-5 h-5" />, color: "text-sky-600 bg-sky-50 border-sky-100" },
+    { label: "Reservations", value: "1", icon: <Clock className="w-5 h-5" />, color: "text-amber-600 bg-amber-50 border-amber-100" },
+  ];
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      {/* Welcome banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-blue-600 via-blue-500 to-sky-400 rounded-3xl p-6 text-white relative overflow-hidden"
+      >
+        <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/10 rounded-full" />
+        <div className="absolute bottom-0 left-1/2 w-40 h-40 bg-white/5 rounded-full translate-y-1/2" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20">
+              ✓ Verified Member
+            </span>
+          </div>
+          <h2 className="text-2xl font-extrabold mb-1">Welcome back, Rahul! 👋</h2>
+          <p className="text-blue-100 text-sm leading-relaxed max-w-lg">
+            Your SVGA Book Bank membership is active. Browse books, track requests, and manage your library account.
+          </p>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {stats.map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07 }}
+                className={`bg-white rounded-2xl p-4 border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 border-blue-50`}
+              >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 border ${s.color}`}>
+                  {s.icon}
+                </div>
+                <div className="text-2xl font-extrabold text-slate-800">{s.value}</div>
+                <div className="text-xs text-slate-400 font-semibold mt-0.5">{s.label}</div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Identity card */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-50">
+              <h3 className="font-extrabold text-slate-800">Student Identity</h3>
+            </div>
+            <div className="p-5 flex items-center gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-sky-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-8 h-8 text-blue-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-extrabold text-lg text-slate-800 leading-tight">{STUDENT.name}</div>
+                <div className="text-sm text-slate-400 mt-0.5">{STUDENT.course} · {STUDENT.year}</div>
+                <div className="text-sm text-slate-400">{STUDENT.college}</div>
+                <div className="flex items-center gap-2 mt-2.5">
+                  <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">
+                    {STUDENT.id}
+                  </span>
+                  <StatusBadge status="Active" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent challans */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+              <h3 className="font-extrabold text-slate-800">Recent Challans</h3>
+              <button onClick={() => onNav("requests")} className="text-blue-600 text-sm font-bold hover:text-blue-700 transition-colors">
+                View all →
+              </button>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {REQUESTS.slice(0, 3).map((r) => (
+                <div key={r.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">{r.id}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{r.date} · {r.type}</div>
+                  </div>
+                  <StatusBadge status={r.status} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Side column */}
+        <div className="space-y-5">
+          {/* Library QR card */}
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-5 text-white">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Library Card</div>
+                <div className="font-extrabold leading-tight">{STUDENT.name}</div>
+                <div className="text-blue-200 text-xs mt-0.5">{STUDENT.id}</div>
+              </div>
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <BookOpen className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="flex justify-center my-4">
+              <div className="bg-white rounded-2xl p-2 shadow-inner">
+                <QRBlock size={110} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-blue-200">Since {STUDENT.memberSince}</div>
+              <button className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                <Download className="w-3 h-3" /> Download
+              </button>
+            </div>
+          </div>
+
+          {/* Membership status */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm p-5">
+            <h3 className="font-extrabold text-slate-800 mb-4">Membership</h3>
+            <div className="space-y-3 text-sm">
+              {[
+                { label: "Status", value: "Active", badge: true },
+                { label: "Deposit Paid", value: "₹500" },
+                { label: "Member Since", value: STUDENT.memberSince },
+                { label: "Verified", value: "✓ Aadhaar" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between">
+                  <span className="text-slate-400 font-medium">{item.label}</span>
+                  {item.badge ? <StatusBadge status={item.value} /> : <span className="font-bold text-slate-700 text-xs">{item.value}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm p-5">
+            <h3 className="font-extrabold text-slate-800 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {[
+                { label: "Browse Books", icon: <BookOpen className="w-4 h-4" />, screen: "browse" as Screen },
+                { label: "My Requests", icon: <FileText className="w-4 h-4" />, screen: "requests" as Screen },
+                { label: "My Account", icon: <User className="w-4 h-4" />, screen: "account" as Screen },
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => onNav(a.screen)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-blue-50/70 hover:bg-blue-100/70 rounded-xl transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5 text-sm font-bold text-slate-700">
+                    <span className="text-blue-500">{a.icon}</span>
+                    {a.label}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 8: Browse Books ───────────────────────────────────────────────────
+function BrowseBooks() {
+  const [search, setSearch] = useState("");
+  const [courseFilter, setCourseFilter] = useState("All");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [challanGenerated, setChallanGenerated] = useState(false);
+
+  const courses = ["All", "B.Tech", "B.Tech CS", "Mathematics", "Physics"];
+
+  const filtered = BOOKS.filter((b) => {
+    const matchSearch =
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      b.author.toLowerCase().includes(search.toLowerCase());
+    const matchCourse = courseFilter === "All" || b.course === courseFilter || b.subject === courseFilter;
+    return matchSearch && matchCourse;
+  });
+
+  const toggle = (id: string) => {
+    if (selected.includes(id)) {
+      setSelected((s) => s.filter((x) => x !== id));
+    } else if (selected.length < 3) {
+      setSelected((s) => [...s, id]);
+    }
+  };
+
+  const handleGenerate = () => {
+    setChallanGenerated(true);
+    setSelected([]);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {challanGenerated && (
+        <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+          <div className="flex-1">
+            <div className="font-bold text-emerald-800 text-sm">Challan Generated Successfully!</div>
+            <div className="text-emerald-600 text-xs mt-0.5">REQ-2024-006 submitted. Track it in My Requests.</div>
+          </div>
+          <button onClick={() => setChallanGenerated(false)}>
+            <X className="w-4 h-4 text-emerald-400" />
+          </button>
+        </div>
+      )}
+
+      <div className="mb-5">
+        <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Select Books</h1>
+        <p className="text-slate-400 text-sm mt-1">Search and select up to 3 books to build your borrowing request</p>
+      </div>
+
+      {/* Step breadcrumb */}
+      <div className="flex items-center gap-2 mb-6">
+        {["Select Books", "Review Selection", "Generate Challan"].map((s, i) => (
+          <div key={s} className="flex items-center gap-2">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-extrabold ${i === 0 ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+              {i + 1}
+            </div>
+            <span className={`text-sm font-bold ${i === 0 ? "text-blue-700" : "text-slate-300"}`}>{s}</span>
+            {i < 2 && <ChevronRight className="w-3.5 h-3.5 text-slate-200" />}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Book list */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Search + filter */}
+          <div className="bg-white rounded-2xl border border-blue-50 shadow-sm p-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <input
+                type="text"
+                placeholder="Search by title, author, or keyword..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {courses.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCourseFilter(c)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    courseFilter === c ? "bg-blue-600 text-white shadow-sm shadow-blue-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Book cards */}
+          <div className="space-y-3">
+            {filtered.map((book) => {
+              const isSel = selected.includes(book.id);
+              const maxed = selected.length >= 3 && !isSel;
+              return (
+                <div
+                  key={book.id}
+                  onClick={() => !maxed && book.available > 0 && toggle(book.id)}
+                  className={`bg-white rounded-2xl border shadow-sm p-4 transition-all duration-200 ${
+                    book.available === 0 || maxed
+                      ? "opacity-60 cursor-not-allowed"
+                      : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"
+                  } ${isSel ? "border-blue-300 bg-blue-50/30 shadow-blue-100" : "border-blue-50"}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+                        isSel ? "bg-blue-600" : "bg-slate-100"
+                      }`}
+                    >
+                      {isSel ? <Check className="w-5 h-5 text-white" /> : <BookOpen className="w-5 h-5 text-slate-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-800 text-sm leading-tight truncate">{book.title}</div>
+                          <div className="text-slate-400 text-xs mt-0.5">by {book.author}</div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {book.available > 0 ? (
+                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                              {book.available} avail.
+                            </span>
+                          ) : (
+                            <span className="bg-red-50 text-red-500 border border-red-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                              Unavailable
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <span className="bg-slate-100 text-slate-500 text-[11px] px-2 py-0.5 rounded-full font-medium">{book.subject}</span>
+                        <span className="bg-blue-50 text-blue-600 text-[11px] px-2 py-0.5 rounded-full font-medium">{book.course}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div className="text-center py-16 text-slate-300">
+                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="font-bold">No books found</p>
+                <p className="text-sm mt-1">Try a different search or filter</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Selection panel */}
+        <div>
+          <div className="bg-white rounded-2xl border border-blue-50 shadow-sm p-5 sticky top-20">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-extrabold text-slate-800">Selected Books</h3>
+              <span className="text-xs font-bold text-slate-400">{selected.length}/3</span>
+            </div>
+            <div className="flex gap-1 mb-4">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className={`flex-1 h-1.5 rounded-full transition-all ${i < selected.length ? "bg-blue-500" : "bg-slate-100"}`}
+                />
+              ))}
+            </div>
+
+            {selected.length === 0 ? (
+              <div className="text-center py-10 text-slate-300">
+                <BookOpen className="w-10 h-10 mx-auto mb-2.5 opacity-50" />
+                <p className="text-sm font-bold">No books selected</p>
+                <p className="text-xs mt-1">Select up to 3 books</p>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {selected.map((id) => {
+                  const book = BOOKS.find((b) => b.id === id)!;
+                  return (
+                    <div key={id} className="flex items-center gap-2.5 bg-blue-50 rounded-xl p-2.5">
+                      <BookOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-xs font-bold text-slate-700 flex-1 min-w-0 truncate">{book.title}</span>
+                      <button
+                        onClick={() => toggle(id)}
+                        className="w-5 h-5 rounded-full bg-slate-200 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
+                      >
+                        <X className="w-3 h-3 text-slate-500" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="border-t border-slate-100 pt-4 space-y-2 text-xs mb-4">
+              {[
+                { label: "Books selected", value: `${selected.length}` },
+                { label: "Max allowed", value: "3" },
+                { label: "Issue period", value: "15 days" },
+                { label: "Renewal", value: "1 time" },
+              ].map((r) => (
+                <div key={r.label} className="flex justify-between">
+                  <span className="text-slate-400 font-medium">{r.label}</span>
+                  <span className="font-bold text-slate-700">{r.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              disabled={selected.length === 0}
+              onClick={handleGenerate}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 disabled:shadow-none transition-all hover:-translate-y-0.5 disabled:translate-y-0 text-sm"
+            >
+              Generate Challan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Screen 9: My Requests ────────────────────────────────────────────────────
+function MyRequests() {
+  const [tab, setTab] = useState("Book Requests");
+  const [filter, setFilter] = useState("All");
+  const tabs = ["Book Requests", "Reservations", "Procurement"];
+  const filters = ["All", "Pending", "Approved", "Procured", "Returned", "Rejected"];
+
+  const filtered = REQUESTS.filter((r) => {
+    const tabMatch =
+      tab === "Book Requests"
+        ? r.type === "Book Request"
+        : tab === "Reservations"
+        ? r.type === "Reservation"
+        : r.type === "Procurement";
+    const filterMatch = filter === "All" || r.status === filter;
+    return tabMatch && filterMatch;
+  });
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">My Requests</h1>
+        <p className="text-slate-400 text-sm mt-1">Track your book requests, reservations, and procurement orders</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex bg-slate-100 rounded-2xl p-1 mb-5 w-fit">
+        {tabs.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+              tab === t ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex gap-2 flex-wrap mb-6">
+        {filters.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+              filter === f
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:text-blue-500"
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {/* Cards */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-20 text-slate-300">
+          <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p className="font-bold text-slate-400">No requests found</p>
+          <p className="text-sm mt-1">Try a different tab or filter</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((r, i) => (
+            <motion.div
+              key={r.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              className="bg-white rounded-2xl border border-blue-50 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 mb-1.5">
+                    <span className="font-extrabold text-slate-800 text-sm">{r.id}</span>
+                    <StatusBadge status={r.status} />
+                  </div>
+                  <div className="text-xs text-slate-400 font-medium mb-3">{r.date} · {r.type}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {r.books.map((b) => (
+                      <span key={b} className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-bold border border-blue-100">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <button className="px-3 py-1.5 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
+                    View Details
+                  </button>
+                  {r.challan && (
+                    <button className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+                      Full Challan
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Screen 10: My Account ────────────────────────────────────────────────────
+function MyAccount({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">My Account</h1>
+          <p className="text-slate-400 text-sm mt-1">Manage your profile and library membership</p>
+        </div>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-2 px-4 py-2.5 border border-red-200 text-red-500 text-sm font-bold rounded-xl hover:bg-red-50 transition-colors flex-shrink-0"
+        >
+          <LogOut className="w-4 h-4" /> Sign Out
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Personal info */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between">
+              <h3 className="font-extrabold text-slate-800">Personal Information</h3>
+              <button className="text-blue-600 text-sm font-bold hover:text-blue-700 transition-colors">Edit</button>
+            </div>
+            <div className="p-5 flex items-start gap-5">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-sky-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-10 h-10 text-blue-400" />
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 flex-1 text-sm">
+                {[
+                  { label: "Full Name", value: STUDENT.name },
+                  { label: "Student ID", value: STUDENT.id },
+                  { label: "Email", value: STUDENT.email },
+                  { label: "Mobile", value: "+91 " + STUDENT.mobile },
+                  { label: "Course", value: STUDENT.course },
+                  { label: "Year", value: STUDENT.year },
+                  { label: "College", value: STUDENT.college },
+                  { label: "Aadhaar", value: STUDENT.aadhaar },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wide">{item.label}</div>
+                    <div className="text-slate-800 font-bold mt-0.5 text-sm leading-tight">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Issued books */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-50">
+              <h3 className="font-extrabold text-slate-800">Currently Issued Books</h3>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {BOOKS.slice(0, 2).map((book) => (
+                <div key={book.id} className="px-5 py-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-slate-800 truncate">{book.title}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{book.author}</div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-amber-600 text-xs font-bold">Due: Apr 30</div>
+                    <div className="mt-1"><StatusBadge status="Approved" /></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Side column */}
+        <div className="space-y-5">
+          {/* Member card + QR */}
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-5 text-white">
+            <div className="text-[10px] text-blue-200 font-bold uppercase tracking-widest mb-1">Member Card</div>
+            <div className="font-extrabold leading-tight">{STUDENT.name}</div>
+            <div className="text-blue-200 text-xs mt-0.5">{STUDENT.id}</div>
+            <div className="flex justify-center my-4">
+              <div className="bg-white rounded-xl p-2">
+                <QRBlock size={100} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-blue-200 font-medium">Valid until</div>
+                <div className="font-bold text-sm">Dec 2024</div>
+              </div>
+              <span className="bg-emerald-400/20 text-emerald-200 border border-emerald-400/30 text-[11px] font-extrabold px-2.5 py-1 rounded-full">
+                ACTIVE
+              </span>
+            </div>
+          </div>
+
+          {/* Account actions */}
+          <div className="bg-white rounded-3xl border border-blue-50 shadow-sm p-5">
+            <h3 className="font-extrabold text-slate-800 mb-3">Account Actions</h3>
+            <div className="space-y-2">
+              {[
+                { label: "Download ID Card", icon: <Download className="w-4 h-4" />, color: "text-blue-600" },
+                { label: "View Challan History", icon: <FileText className="w-4 h-4" />, color: "text-blue-600" },
+                { label: "Update Profile", icon: <Settings className="w-4 h-4" />, color: "text-blue-600" },
+                { label: "Return Books", icon: <RefreshCw className="w-4 h-4" />, color: "text-amber-600" },
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-blue-50 rounded-xl transition-colors group text-sm"
+                >
+                  <div className={`flex items-center gap-2.5 font-bold ${a.color}`}>
+                    {a.icon} {a.label}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                </button>
+              ))}
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center justify-between px-4 py-3 bg-red-50 hover:bg-red-100 rounded-xl transition-colors group text-sm"
+              >
+                <div className="flex items-center gap-2.5 font-bold text-red-500">
+                  <LogOut className="w-4 h-4" /> Sign Out
+                </div>
+                <ChevronRight className="w-4 h-4 text-red-300 group-hover:text-red-400 transition-colors" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Root App ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const [screen, setScreen] = useState<Screen>("login");
+  const isPostAuth = ["dashboard", "browse", "requests", "account"].includes(screen);
+
+  return (
+    <div className="min-h-screen bg-background" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      {isPostAuth && <NavBar active={screen} onNav={setScreen} />}
+
+      {screen === "login" && <LoginScreen onNext={() => setScreen("register")} />}
+      {screen === "register" && <RegistrationScreen onComplete={() => setScreen("dashboard")} />}
+      {screen === "dashboard" && <DashboardScreen onNav={setScreen} />}
+      {screen === "browse" && <BrowseBooks />}
+      {screen === "requests" && <MyRequests />}
+      {screen === "account" && <MyAccount onLogout={() => setScreen("login")} />}
+    </div>
+  );
+}
