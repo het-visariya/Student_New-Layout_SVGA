@@ -4,12 +4,42 @@ import {
   BookOpen, User, LayoutDashboard, Search, Check, Download,
   CheckCircle, LogOut, CreditCard, Smartphone, Camera, X,
   Shield, Clock, BookMarked, FileText, ChevronRight, Wallet,
-  Settings, RefreshCw, Library, QrCode, ChevronDown,
+  Settings, RefreshCw, Library, QrCode, ChevronDown, Upload,
+  Trash2, Pencil, Eye,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Screen = "login" | "register" | "dashboard" | "browse" | "requests" | "account";
 type RegStep = 1 | 2 | 3;
+
+type RequestChallan = {
+  id: string;
+  orderNo: string;
+  challanNo: string;
+  date: string;
+  student: {
+    name: string;
+    course: string;
+    college: string;
+    phone: string;
+    studentId: string;
+  };
+  status: string;
+  deposit: string;
+  refund: string;
+  libraryBooks: Array<{ title: string; author: string; notes?: string }>;
+  specialRequests: Array<{ title: string; author: string; edition: string; publisher: string; notes: string; imageName: string | null }>;
+};
+
+type RequestItem = {
+  id: string;
+  requestId: string;
+  date: string;
+  type: "Book Request";
+  status: "Pending" | "Approved" | "Returned" | "Rejected" | "Procured";
+  books: string[];
+  challan: RequestChallan | null;
+};
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const STUDENT = {
@@ -35,12 +65,25 @@ const BOOKS = [
   { id: "b8", title: "Compiler Design", author: "Alfred V. Aho", course: "B.Tech CS", subject: "Computer Science", available: 3 },
 ];
 
-const REQUESTS = [
-  { id: "REQ-2024-001", date: "15 Jan 2024", type: "Book Request", status: "Approved", books: ["Engineering Mathematics", "Engineering Physics"], challan: "CHN-001" },
-  { id: "REQ-2024-002", date: "3 Feb 2024", type: "Procurement", status: "Pending", books: ["Advanced Algorithms"], challan: null },
-  { id: "REQ-2024-003", date: "22 Feb 2024", type: "Book Request", status: "Returned", books: ["Database Management Systems"], challan: "CHN-002" },
-  { id: "REQ-2024-004", date: "10 Mar 2024", type: "Reservation", status: "Approved", books: ["Computer Networks"], challan: "CHN-003" },
-  { id: "REQ-2024-005", date: "1 Apr 2024", type: "Book Request", status: "Rejected", books: ["Quantum Computing Basics"], challan: null },
+const INITIAL_REQUESTS: RequestItem[] = [
+  {
+    id: "REQ-2024-001",
+    requestId: "REQ-2024-001",
+    date: "15 Jan 2024",
+    type: "Book Request",
+    status: "Approved",
+    books: ["Engineering Mathematics", "Engineering Physics"],
+    challan: null,
+  },
+  {
+    id: "REQ-2024-002",
+    requestId: "REQ-2024-002",
+    date: "3 Feb 2024",
+    type: "Book Request",
+    status: "Pending",
+    books: ["Advanced Algorithms"],
+    challan: null,
+  },
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -115,6 +158,108 @@ function QRBlock({ size = 120 }: { size?: number }) {
       {cells.map((cell, i) => (
         <div key={i} style={{ backgroundColor: cell ? "#1a1a2e" : "transparent" }} />
       ))}
+    </div>
+  );
+}
+
+function ChallanPreviewCard({ challan, course }: { challan: RequestChallan | null; course: string }) {
+  if (!challan) return null;
+
+  return (
+    <div className="rounded-[32px] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6 shadow-lg shadow-blue-100">
+      <div className="flex flex-col gap-6 border-b border-slate-200 pb-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+            <BookOpen className="h-7 w-7" />
+          </div>
+          <div>
+            <div className="text-xl font-extrabold text-slate-800">SVGA Book Bank</div>
+            <div className="text-sm text-slate-500">Borrowing Challan</div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-slate-700">
+          <div><span className="font-semibold text-slate-700">Order No:</span> {challan.orderNo}</div>
+          <div><span className="font-semibold text-slate-700">Challan No:</span> {challan.challanNo}</div>
+          <div><span className="font-semibold text-slate-700">Date:</span> {challan.date}</div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-500">Student Details</div>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-700">
+              {challan.status}
+            </span>
+          </div>
+          <div className="mt-4 space-y-2 text-sm text-slate-700">
+            <div><span className="font-semibold text-slate-700">Name:</span> {challan.student.name}</div>
+            <div><span className="font-semibold text-slate-700">Course:</span> {course}</div>
+            <div><span className="font-semibold text-slate-700">College:</span> {challan.student.college}</div>
+            <div><span className="font-semibold text-slate-700">Phone:</span> {challan.student.phone}</div>
+            <div><span className="font-semibold text-slate-700">Student ID:</span> {challan.student.studentId}</div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-600 to-indigo-600 p-5 text-white shadow-sm">
+          <div className="text-sm font-extrabold uppercase tracking-[0.2em] text-blue-100">Payment & Status</div>
+          <div className="mt-4 space-y-2 text-sm">
+            <div><span className="font-semibold text-blue-100">Status:</span> {challan.status}</div>
+            <div><span className="font-semibold text-blue-100">Deposit:</span> {challan.deposit}</div>
+            <div><span className="font-semibold text-blue-100">Refund:</span> {challan.refund}</div>
+          </div>
+          <div className="mt-5 flex h-24 w-24 items-center justify-center rounded-2xl bg-white/15">
+            <QRBlock size={84} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-extrabold text-slate-800">Library Books</div>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
+              {challan.libraryBooks.length} items
+            </span>
+          </div>
+          <div className="mt-4 space-y-2">
+            {challan.libraryBooks.length > 0 ? challan.libraryBooks.map((book, index) => (
+              <div key={`${book.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <div className="font-semibold">{index + 1}. {book.title}</div>
+                <div className="mt-1 text-xs text-slate-400">{book.author}</div>
+              </div>
+            )) : <div className="text-sm text-slate-400">No library books selected.</div>}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-extrabold text-slate-800">Special Request Books</div>
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">
+              {challan.specialRequests.length} requests
+            </span>
+          </div>
+          <div className="mt-4 space-y-2">
+            {challan.specialRequests.length > 0 ? challan.specialRequests.map((request, index) => (
+              <div key={`${request.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <div className="font-semibold">{index + 1}. {request.title}</div>
+                <div className="mt-1 text-xs text-slate-400">{request.author}</div>
+              </div>
+            )) : <div className="text-sm text-slate-400">No special requests added.</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="font-bold text-slate-800">Signature</div>
+          <div className="mt-3 h-12 border-b border-slate-300" />
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="font-bold text-slate-800">Refund Clause</div>
+          <div className="mt-2 text-xs leading-5">Books must be returned on or before the due date. Security deposit will be refunded after successful return and clearance.</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -356,7 +501,15 @@ function RegistrationScreen({ onComplete }: { onComplete: () => void }) {
           onClose={() => setShowPayment(false)}
         />
       )}
-      {showSuccess && <SuccessModal onContinue={onComplete} />}
+      {showSuccess && (
+        <SuccessModal
+          onContinue={() => {
+            setShowSuccess(false);
+            setShowPayment(false);
+            onComplete();
+          }}
+        />
+      )}
 
       <div className="max-w-2xl mx-auto">
         <div className="flex flex-col items-center mb-6">
@@ -755,7 +908,7 @@ function SuccessModal({ onContinue }: { onContinue: () => void }) {
 }
 
 // ─── Screen 7: Dashboard ──────────────────────────────────────────────────────
-function DashboardScreen({ onNav }: { onNav: (s: Screen) => void }) {
+function DashboardScreen({ onNav, requests }: { onNav: (s: Screen) => void; requests: RequestItem[] }) {
   const stats = [
     { label: "Membership", value: "Active", icon: <Shield className="w-5 h-5" />, color: "text-blue-600 bg-blue-50 border-blue-100" },
     { label: "Total Issued", value: "3", icon: <BookOpen className="w-5 h-5" />, color: "text-violet-600 bg-violet-50 border-violet-100" },
@@ -839,17 +992,17 @@ function DashboardScreen({ onNav }: { onNav: (s: Screen) => void }) {
                 View all →
               </button>
             </div>
-            <div className="divide-y divide-slate-50">
-              {REQUESTS.slice(0, 3).map((r) => (
-                <div key={r.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
-                  <div>
-                    <div className="text-sm font-bold text-slate-800">{r.id}</div>
-                    <div className="text-xs text-slate-400 mt-0.5">{r.date} · {r.type}</div>
+                <div className="divide-y divide-slate-50">
+                {requests.slice(0, 3).map((r) => (
+                  <div key={r.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
+                    <div>
+                      <div className="text-sm font-bold text-slate-800">{r.id}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">{r.date} · {r.type}</div>
+                    </div>
+                    <StatusBadge status={r.status} />
                   </div>
-                  <StatusBadge status={r.status} />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
           </div>
         </div>
 
@@ -928,325 +1081,595 @@ function DashboardScreen({ onNav }: { onNav: (s: Screen) => void }) {
 }
 
 // ─── Screen 8: Browse Books ───────────────────────────────────────────────────
-function BrowseBooks() {
-  const [search, setSearch] = useState("");
-  const [courseFilter, setCourseFilter] = useState("All");
-  const [selected, setSelected] = useState<string[]>([]);
+function BrowseBooks({ onRequestCreated }: { onRequestCreated: (request: RequestItem) => void }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [course, setCourse] = useState("");
+  const [stream, setStream] = useState("");
+  const [bookSearch, setBookSearch] = useState("");
+  const [selectedLibraryBooks, setSelectedLibraryBooks] = useState<string[]>([]);
+  const [specialRequests, setSpecialRequests] = useState<Array<{
+    id: string;
+    title: string;
+    author: string;
+    edition: string;
+    publisher: string;
+    notes: string;
+    imageName: string | null;
+  }>>([]);
+  const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
+  const [previewRequestId, setPreviewRequestId] = useState<string | null>(null);
   const [challanGenerated, setChallanGenerated] = useState(false);
-
-  const courses = ["All", "B.Tech", "B.Tech CS", "Mathematics", "Physics"];
-
-  const filtered = BOOKS.filter((b) => {
-    const matchSearch =
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.author.toLowerCase().includes(search.toLowerCase());
-    const matchCourse = courseFilter === "All" || b.course === courseFilter || b.subject === courseFilter;
-    return matchSearch && matchCourse;
+  const [generatedChallan, setGeneratedChallan] = useState<RequestChallan | null>(null);
+  const [requestForm, setRequestForm] = useState({
+    title: "",
+    author: "",
+    edition: "",
+    publisher: "",
+    notes: "",
+    imageName: "",
   });
 
-  const toggle = (id: string) => {
-    if (selected.includes(id)) {
-      setSelected((s) => s.filter((x) => x !== id));
-    } else if (selected.length < 3) {
-      setSelected((s) => [...s, id]);
-    }
+  const courseOptions = ["FYJC", "SYJC", "FY-Degree", "SY-Degree", "TY-Degree", "MBBS", "BDS", "Engineering", "Commerce", "Arts", "Science", "Other"];
+  const showStreamField = ["FYJC", "SYJC", "FY-Degree", "SY-Degree", "TY-Degree", "MBBS", "BDS", "Engineering", "Commerce", "Arts", "Science", "Other"].includes(course);
+
+  const inventoryBooks = useMemo(() =>
+    BOOKS.map((book) => ({
+      ...book,
+      keywords: `${book.title} ${book.author} ${book.subject} ${book.course}`.toLowerCase(),
+      isbn: `ISBN-${book.id.toUpperCase()}`,
+    })),
+    []
+  );
+
+  const filteredBooks = useMemo(() => {
+    const query = bookSearch.toLowerCase().trim();
+    if (!query) return [];
+    return inventoryBooks.filter((book) => {
+      const isSelected = selectedLibraryBooks.includes(book.id);
+      if (isSelected) return false;
+      return [book.title, book.author, book.subject, book.course, book.isbn, book.keywords]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [bookSearch, inventoryBooks, selectedLibraryBooks]);
+
+  const toggleLibraryBook = (id: string) => {
+    setSelectedLibraryBooks((current) => (current.includes(id) ? current.filter((bookId) => bookId !== id) : [...current, id]));
   };
 
-  const handleGenerate = () => {
-    setChallanGenerated(true);
-    setSelected([]);
+  const resetRequestForm = () => {
+    setRequestForm({ title: "", author: "", edition: "", publisher: "", notes: "", imageName: "" });
+    setEditingRequestId(null);
   };
+
+  const handleRequestSubmit = () => {
+    if (!requestForm.title.trim() || !requestForm.author.trim()) return;
+
+    if (editingRequestId) {
+      setSpecialRequests((current) =>
+        current.map((request) => (request.id === editingRequestId ? { ...request, ...requestForm, title: requestForm.title.trim(), author: requestForm.author.trim() } : request))
+      );
+    } else {
+      setSpecialRequests((current) => [
+        ...current,
+        {
+          id: `req-${Date.now()}`,
+          title: requestForm.title.trim(),
+          author: requestForm.author.trim(),
+          edition: requestForm.edition.trim(),
+          publisher: requestForm.publisher.trim(),
+          notes: requestForm.notes.trim(),
+          imageName: requestForm.imageName || null,
+        },
+      ]);
+    }
+
+    resetRequestForm();
+  };
+
+  const handleEditRequest = (request: (typeof specialRequests)[number]) => {
+    setEditingRequestId(request.id);
+    setRequestForm({
+      title: request.title,
+      author: request.author,
+      edition: request.edition,
+      publisher: request.publisher,
+      notes: request.notes,
+      imageName: request.imageName || "",
+    });
+  };
+
+  const handleDeleteRequest = (requestId: string) => {
+    setSpecialRequests((current) => current.filter((request) => request.id !== requestId));
+    if (editingRequestId === requestId) resetRequestForm();
+    if (previewRequestId === requestId) setPreviewRequestId(null);
+  };
+
+  const handleGenerateChallan = () => {
+    if (selectedLibraryBooks.length === 0 && specialRequests.length === 0) return;
+
+    const today = new Date();
+    const requestId = `REQ-${today.getFullYear()}-${String(Date.now()).slice(-4)}`;
+    const challanNo = `CHL-${today.getFullYear()}-${String(Date.now()).slice(-4)}`;
+    const orderNo = `ORD-${today.getFullYear()}-${String(Date.now()).slice(-4)}`;
+    const requestDate = today.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    const libraryBooks = selectedLibraryBooks.map((bookId) => {
+      const book = inventoryBooks.find((item) => item.id === bookId);
+      return { title: book?.title ?? "Unknown", author: book?.author ?? "Unknown", notes: "Available for issue" };
+    });
+    const specialBookRequests = specialRequests.map((request) => ({
+      title: request.title,
+      author: request.author,
+      edition: request.edition,
+      publisher: request.publisher,
+      notes: request.notes,
+      imageName: request.imageName,
+    }));
+
+    const challan: RequestChallan = {
+      id: challanNo,
+      orderNo,
+      challanNo,
+      date: requestDate,
+      student: {
+        name: STUDENT.name,
+        course,
+        college: STUDENT.college,
+        phone: STUDENT.mobile,
+        studentId: STUDENT.id,
+      },
+      status: "Pending Verification",
+      deposit: "₹500",
+      refund: "Applicable on return",
+      libraryBooks,
+      specialRequests: specialBookRequests,
+    };
+
+    const request: RequestItem = {
+      id: requestId,
+      requestId,
+      date: requestDate,
+      type: "Book Request",
+      status: "Pending",
+      books: [...libraryBooks.map((book) => book.title), ...specialBookRequests.map((book) => book.title)],
+      challan,
+    };
+
+    setGeneratedChallan(challan);
+    setChallanGenerated(true);
+    onRequestCreated(request);
+  };
+
+  const handleChangeCourse = () => {
+    setStep(1);
+    setCourse("");
+    setStream("");
+    setChallanGenerated(false);
+    setGeneratedChallan(null);
+  };
+
+  const canContinue = Boolean(course && (showStreamField ? stream : true));
+  const canGenerate = selectedLibraryBooks.length > 0 || specialRequests.length > 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {challanGenerated && (
-        <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-          <div className="flex-1">
-            <div className="font-bold text-emerald-800 text-sm">Challan Generated Successfully!</div>
-            <div className="text-emerald-600 text-xs mt-0.5">REQ-2024-006 submitted. Track it in My Requests.</div>
-          </div>
-          <button onClick={() => setChallanGenerated(false)}>
-            <X className="w-4 h-4 text-emerald-400" />
-          </button>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Select Books</h1>
+          <p className="text-slate-400 text-sm mt-1">Search for books and build your borrowing request.</p>
         </div>
-      )}
-
-      <div className="mb-5">
-        <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Select Books</h1>
-        <p className="text-slate-400 text-sm mt-1">Search and select up to 3 books to build your borrowing request</p>
+        {step === 2 && (
+          <button
+            onClick={handleChangeCourse}
+            className="px-4 py-2 rounded-xl border border-blue-200 text-sm font-bold text-blue-700 hover:bg-blue-50 transition-colors"
+          >
+            Change Course
+          </button>
+        )}
       </div>
 
-      {/* Step breadcrumb */}
-      <div className="flex items-center gap-2 mb-6">
-        {["Select Books", "Review Selection", "Generate Challan"].map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-extrabold ${i === 0 ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400"}`}>
-              {i + 1}
+      <div className="flex flex-wrap items-center gap-2 mb-8">
+        {[
+          { label: "Step 1", sub: "Select Course" },
+          { label: "Step 2", sub: "Choose Books" },
+        ].map((item, index) => (
+          <div key={item.label} className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${index + 1 <= step ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+              {index + 1}
             </div>
-            <span className={`text-sm font-bold ${i === 0 ? "text-blue-700" : "text-slate-300"}`}>{s}</span>
-            {i < 2 && <ChevronRight className="w-3.5 h-3.5 text-slate-200" />}
+            <div>
+              <div className={`text-sm font-bold ${index + 1 <= step ? "text-blue-700" : "text-slate-400"}`}>{item.label}</div>
+              <div className="text-[11px] text-slate-400">{item.sub}</div>
+            </div>
+            {index < 1 && <ChevronRight className="w-4 h-4 text-slate-200" />}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Book list */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Search + filter */}
-          <div className="bg-white rounded-2xl border border-blue-50 shadow-sm p-4 space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <input
-                type="text"
-                placeholder="Search by title, author, or keyword..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm"
-              />
+      {step === 1 ? (
+        <div className="bg-white rounded-3xl border border-blue-50 shadow-sm p-6 sm:p-8">
+          <div className="max-w-xl">
+            <div className="mb-6">
+              <h2 className="text-xl font-extrabold text-slate-800">Select Course</h2>
+              <p className="text-slate-400 text-sm mt-1">Choose your course and stream to continue.</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {courses.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCourseFilter(c)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    courseFilter === c ? "bg-blue-600 text-white shadow-sm shadow-blue-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Book cards */}
-          <div className="space-y-3">
-            {filtered.map((book) => {
-              const isSel = selected.includes(book.id);
-              const maxed = selected.length >= 3 && !isSel;
-              return (
-                <div
-                  key={book.id}
-                  onClick={() => !maxed && book.available > 0 && toggle(book.id)}
-                  className={`bg-white rounded-2xl border shadow-sm p-4 transition-all duration-200 ${
-                    book.available === 0 || maxed
-                      ? "opacity-60 cursor-not-allowed"
-                      : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"
-                  } ${isSel ? "border-blue-300 bg-blue-50/30 shadow-blue-100" : "border-blue-50"}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                        isSel ? "bg-blue-600" : "bg-slate-100"
-                      }`}
-                    >
-                      {isSel ? <Check className="w-5 h-5 text-white" /> : <BookOpen className="w-5 h-5 text-slate-400" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-800 text-sm leading-tight truncate">{book.title}</div>
-                          <div className="text-slate-400 text-xs mt-0.5">by {book.author}</div>
-                        </div>
-                        <div className="flex-shrink-0">
-                          {book.available > 0 ? (
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                              {book.available} avail.
-                            </span>
-                          ) : (
-                            <span className="bg-red-50 text-red-500 border border-red-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                              Unavailable
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <span className="bg-slate-100 text-slate-500 text-[11px] px-2 py-0.5 rounded-full font-medium">{book.subject}</span>
-                        <span className="bg-blue-50 text-blue-600 text-[11px] px-2 py-0.5 rounded-full font-medium">{book.course}</span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1.5">Course / Standard</label>
+                <div className="relative">
+                  <select
+                    value={course}
+                    onChange={(e) => {
+                      setCourse(e.target.value);
+                      setStream("");
+                    }}
+                    className="w-full appearance-none rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="">Select course / standard</option>
+                    {courseOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 </div>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div className="text-center py-16 text-slate-300">
-                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p className="font-bold">No books found</p>
-                <p className="text-sm mt-1">Try a different search or filter</p>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Selection panel */}
-        <div>
-          <div className="bg-white rounded-2xl border border-blue-50 shadow-sm p-5 sticky top-20">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-extrabold text-slate-800">Selected Books</h3>
-              <span className="text-xs font-bold text-slate-400">{selected.length}/3</span>
-            </div>
-            <div className="flex gap-1 mb-4">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className={`flex-1 h-1.5 rounded-full transition-all ${i < selected.length ? "bg-blue-500" : "bg-slate-100"}`}
-                />
-              ))}
-            </div>
-
-            {selected.length === 0 ? (
-              <div className="text-center py-10 text-slate-300">
-                <BookOpen className="w-10 h-10 mx-auto mb-2.5 opacity-50" />
-                <p className="text-sm font-bold">No books selected</p>
-                <p className="text-xs mt-1">Select up to 3 books</p>
-              </div>
-            ) : (
-              <div className="space-y-2 mb-4">
-                {selected.map((id) => {
-                  const book = BOOKS.find((b) => b.id === id)!;
-                  return (
-                    <div key={id} className="flex items-center gap-2.5 bg-blue-50 rounded-xl p-2.5">
-                      <BookOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <span className="text-xs font-bold text-slate-700 flex-1 min-w-0 truncate">{book.title}</span>
-                      <button
-                        onClick={() => toggle(id)}
-                        className="w-5 h-5 rounded-full bg-slate-200 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition-colors"
-                      >
-                        <X className="w-3 h-3 text-slate-500" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="border-t border-slate-100 pt-4 space-y-2 text-xs mb-4">
-              {[
-                { label: "Books selected", value: `${selected.length}` },
-                { label: "Max allowed", value: "3" },
-                { label: "Issue period", value: "15 days" },
-                { label: "Renewal", value: "1 time" },
-              ].map((r) => (
-                <div key={r.label} className="flex justify-between">
-                  <span className="text-slate-400 font-medium">{r.label}</span>
-                  <span className="font-bold text-slate-700">{r.value}</span>
+              {showStreamField && (
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Stream *</label>
+                  <input
+                    type="text"
+                    value={stream}
+                    onChange={(e) => setStream(e.target.value)}
+                    placeholder="Enter your stream"
+                    className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
                 </div>
-              ))}
+              )}
             </div>
 
             <button
-              disabled={selected.length === 0}
-              onClick={handleGenerate}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 disabled:shadow-none transition-all hover:-translate-y-0.5 disabled:translate-y-0 text-sm"
+              onClick={() => setStep(2)}
+              disabled={!canContinue}
+              className="mt-6 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
             >
-              Generate Challan
+              Continue
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-6">
+          {challanGenerated ? (
+            <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold"><CheckCircle className="w-5 h-5" /> Challan Generated Successfully</div>
+                  <p className="text-sm text-emerald-700 mt-1">Your borrowing request has been prepared for review.</p>
+                </div>
+                <button onClick={() => setChallanGenerated(false)} className="text-sm font-bold text-emerald-700 hover:text-emerald-800">
+                  Close Preview
+                </button>
+              </div>
+
+              <div className="mt-6">
+                <ChallanPreviewCard challan={generatedChallan} course={course} />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+              <div className="space-y-6">
+                <div className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-slate-800">Library Books</h2>
+                      <p className="text-sm text-slate-400">Search through the admin inventory and add books to your request.</p>
+                    </div>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{selectedLibraryBooks.length} selected</span>
+                  </div>
+
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                    <input
+                      type="text"
+                      placeholder="Search books by title, author, subject, keyword or ISBN"
+                      value={bookSearch}
+                      onChange={(e) => setBookSearch(e.target.value)}
+                      className="w-full rounded-xl border border-blue-100 bg-blue-50/60 py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  </div>
+
+                  <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-extrabold text-slate-800">Selected Library Books</div>
+                        <div className="text-xs text-slate-400">These books will appear in your challan request.</div>
+                      </div>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-blue-700">{selectedLibraryBooks.length} selected</span>
+                    </div>
+                    <div className="space-y-2">
+                      {selectedLibraryBooks.length > 0 ? selectedLibraryBooks.map((bookId) => {
+                        const book = inventoryBooks.find((item) => item.id === bookId);
+                        return (
+                          <div key={bookId} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-3 py-2">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold text-slate-700">{book?.title}</div>
+                              <div className="text-xs text-slate-400">{book?.author}</div>
+                              <div className="mt-1 text-[11px] font-bold text-emerald-700">{book?.available ? `${book.available} Available` : "Unavailable"}</div>
+                            </div>
+                            <button onClick={() => toggleLibraryBook(bookId)} className="text-xs font-bold text-red-500 hover:text-red-600">
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      }) : <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-3 text-sm text-slate-400">No library books selected yet. Search and add books below.</div>}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {bookSearch.trim() === "" ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
+                        No books shown yet. Start typing to search the library inventory.
+                      </div>
+                    ) : filteredBooks.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
+                        No matching books found for this search.
+                      </div>
+                    ) : filteredBooks.map((book) => (
+                      <div key={book.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <div className="font-bold text-slate-800">{book.title}</div>
+                          <div className="mt-1 text-sm text-slate-500">by {book.author}</div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">{book.subject}</span>
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">{book.course}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${book.available > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                            {book.available > 0 ? `${book.available} Available` : "Unavailable"}
+                          </span>
+                          <button
+                            onClick={() => toggleLibraryBook(book.id)}
+                            className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 transition-all hover:bg-blue-50"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-slate-800">Special Book Request</h2>
+                      <p className="text-sm text-slate-400">Add a manual book request for materials not in the inventory.</p>
+                    </div>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{specialRequests.length} requests</span>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-bold text-slate-700">Book Title *</label>
+                      <input
+                        value={requestForm.title}
+                        onChange={(e) => setRequestForm((current) => ({ ...current, title: e.target.value }))}
+                        placeholder="Enter title"
+                        className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-bold text-slate-700">Author *</label>
+                      <input
+                        value={requestForm.author}
+                        onChange={(e) => setRequestForm((current) => ({ ...current, author: e.target.value }))}
+                        placeholder="Enter author"
+                        className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-bold text-slate-700">Edition</label>
+                      <input
+                        value={requestForm.edition}
+                        onChange={(e) => setRequestForm((current) => ({ ...current, edition: e.target.value }))}
+                        placeholder="e.g. 3rd Edition"
+                        className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-bold text-slate-700">Publisher</label>
+                      <input
+                        value={requestForm.publisher}
+                        onChange={(e) => setRequestForm((current) => ({ ...current, publisher: e.target.value }))}
+                        placeholder="Enter publisher"
+                        className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="mb-1.5 block text-sm font-bold text-slate-700">Notes / Special Instructions</label>
+                      <textarea
+                        value={requestForm.notes}
+                        onChange={(e) => setRequestForm((current) => ({ ...current, notes: e.target.value }))}
+                        placeholder="Add any notes or requirements"
+                        rows={3}
+                        className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="mb-1.5 block text-sm font-bold text-slate-700">Book Cover / Reference Image Upload</label>
+                      <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 px-4 py-6 text-center text-sm text-slate-500">
+                        <Upload className="mb-2 h-5 w-5 text-blue-500" />
+                        <span className="font-semibold text-blue-700">Browse files</span>
+                        <span className="mt-1">PNG, JPG up to 5 MB</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setRequestForm((current) => ({ ...current, imageName: file.name }));
+                          }}
+                        />
+                      </label>
+                      {requestForm.imageName && <div className="mt-2 text-xs text-slate-500">Selected: {requestForm.imageName}</div>}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button onClick={resetRequestForm} className="rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-bold text-blue-700 hover:bg-blue-50">
+                      Cancel
+                    </button>
+                    <button onClick={handleRequestSubmit} className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700">
+                      {editingRequestId ? "Update Request" : "Add to Request List"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-extrabold text-slate-800">Request Summary</h3>
+                    <p className="text-sm text-slate-400">Review your selected books before generating the challan.</p>
+                  </div>
+                  <div className="space-y-2 text-sm text-slate-600">
+                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                      <span>Library selection</span>
+                      <span className="font-bold text-slate-700">{selectedLibraryBooks.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                      <span>Special requests</span>
+                      <span className="font-bold text-slate-700">{specialRequests.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                      <span>Course</span>
+                      <span className="font-bold text-slate-700">{course || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-blue-50 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-extrabold text-slate-800">Special Request Books</h3>
+                      <p className="text-sm text-slate-400">Manage your manual requests before challan generation.</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {specialRequests.length > 0 ? specialRequests.map((request) => (
+                      <div key={request.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="text-sm font-semibold text-slate-700">{request.title}</div>
+                            <div className="text-xs text-slate-400">{request.author}</div>
+                          </div>
+                          <span className="rounded-full bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700">Pending</span>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button onClick={() => handleEditRequest(request)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                            <Pencil className="h-3.5 w-3.5" /> Edit
+                          </button>
+                          <button onClick={() => setPreviewRequestId(request.id)} className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                            <Eye className="h-3.5 w-3.5" /> View
+                          </button>
+                          <button onClick={() => handleDeleteRequest(request.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50">
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </button>
+                        </div>
+                        {previewRequestId === request.id && (
+                          <div className="mt-3 rounded-xl border border-blue-100 bg-white p-3 text-xs text-slate-500">
+                            <div><span className="font-semibold text-slate-700">Title:</span> {request.title}</div>
+                            <div><span className="font-semibold text-slate-700">Author:</span> {request.author}</div>
+                            <div><span className="font-semibold text-slate-700">Edition:</span> {request.edition || "—"}</div>
+                            <div><span className="font-semibold text-slate-700">Publisher:</span> {request.publisher || "—"}</div>
+                            <div><span className="font-semibold text-slate-700">Notes:</span> {request.notes || "—"}</div>
+                            <div><span className="font-semibold text-slate-700">Image:</span> {request.imageName || "Not uploaded"}</div>
+                          </div>
+                        )}
+                      </div>
+                    )) : <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-400">No special requests added yet.</div>}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleGenerateChallan}
+                  disabled={!canGenerate}
+                  className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  Generate Challan
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Screen 9: My Requests ────────────────────────────────────────────────────
-function MyRequests() {
-  const [tab, setTab] = useState("Book Requests");
-  const [filter, setFilter] = useState("All");
-  const tabs = ["Book Requests", "Reservations", "Procurement"];
-  const filters = ["All", "Pending", "Approved", "Procured", "Returned", "Rejected"];
-
-  const filtered = REQUESTS.filter((r) => {
-    const tabMatch =
-      tab === "Book Requests"
-        ? r.type === "Book Request"
-        : tab === "Reservations"
-        ? r.type === "Reservation"
-        : r.type === "Procurement";
-    const filterMatch = filter === "All" || r.status === filter;
-    return tabMatch && filterMatch;
-  });
-
+function MyRequests({
+  requests,
+  onViewChallan,
+}: {
+  requests: RequestItem[];
+  onViewChallan: (challan: RequestChallan | null) => void;
+}) {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">My Requests</h1>
-        <p className="text-slate-400 text-sm mt-1">Track your book requests, reservations, and procurement orders</p>
+        <p className="text-slate-400 text-sm mt-1">Track your generated book requests and open the challan anytime.</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex bg-slate-100 rounded-2xl p-1 mb-5 w-fit">
-        {tabs.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              tab === t ? "bg-white text-blue-700 shadow-sm" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {/* Filter chips */}
-      <div className="flex gap-2 flex-wrap mb-6">
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
-              filter === f
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:text-blue-500"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      {/* Cards */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-20 text-slate-300">
-          <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+      {requests.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-200 bg-white py-20 text-center text-slate-300">
+          <FileText className="mx-auto mb-3 h-12 w-12 opacity-50" />
           <p className="font-bold text-slate-400">No requests found</p>
-          <p className="text-sm mt-1">Try a different tab or filter</p>
+          <p className="mt-1 text-sm">Generate a challan from Browse Books to create your first request.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r, i) => (
+          {requests.map((request, index) => (
             <motion.div
-              key={r.id}
+              key={request.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="bg-white rounded-2xl border border-blue-50 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              transition={{ delay: index * 0.04 }}
+              className="rounded-2xl border border-blue-50 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2.5 mb-1.5">
-                    <span className="font-extrabold text-slate-800 text-sm">{r.id}</span>
-                    <StatusBadge status={r.status} />
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+                    <span className="text-sm font-extrabold text-slate-800">{request.requestId}</span>
+                    <StatusBadge status={request.status} />
                   </div>
-                  <div className="text-xs text-slate-400 font-medium mb-3">{r.date} · {r.type}</div>
+                  <div className="mb-3 text-xs font-medium text-slate-400">{request.date} · {request.type}</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {r.books.map((b) => (
-                      <span key={b} className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-bold border border-blue-100">
-                        {b}
+                    {request.books.map((book) => (
+                      <span key={book} className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                        {book}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  <button className="px-3 py-1.5 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
-                    View Details
-                  </button>
-                  {r.challan && (
-                    <button className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-                      Full Challan
+                <div className="flex-shrink-0">
+                  {request.challan ? (
+                    <button
+                      onClick={() => onViewChallan(request.challan)}
+                      className="rounded-lg border border-blue-200 bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-blue-700"
+                    >
+                      View Challan
                     </button>
+                  ) : (
+                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-400">
+                      No challan
+                    </span>
                   )}
                 </div>
               </div>
@@ -1396,18 +1819,44 @@ function MyAccount({ onLogout }: { onLogout: () => void }) {
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState<Screen>("login");
+  const [requests, setRequests] = useState<RequestItem[]>(INITIAL_REQUESTS);
+  const [activeChallan, setActiveChallan] = useState<RequestChallan | null>(null);
   const isPostAuth = ["dashboard", "browse", "requests", "account"].includes(screen);
+
+  const handleRegistrationComplete = () => {
+    setScreen("dashboard");
+    setActiveChallan(null);
+  };
+
+  const handleRequestCreated = (request: RequestItem) => {
+    setRequests((current) => [request, ...current]);
+    setActiveChallan(request.challan);
+  };
 
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {isPostAuth && <NavBar active={screen} onNav={setScreen} />}
 
       {screen === "login" && <LoginScreen onNext={() => setScreen("register")} />}
-      {screen === "register" && <RegistrationScreen onComplete={() => setScreen("dashboard")} />}
-      {screen === "dashboard" && <DashboardScreen onNav={setScreen} />}
-      {screen === "browse" && <BrowseBooks />}
-      {screen === "requests" && <MyRequests />}
+      {screen === "register" && <RegistrationScreen onComplete={handleRegistrationComplete} />}
+      {screen === "dashboard" && <DashboardScreen onNav={setScreen} requests={requests} />}
+      {screen === "browse" && <BrowseBooks onRequestCreated={handleRequestCreated} />}
+      {screen === "requests" && <MyRequests requests={requests} onViewChallan={setActiveChallan} />}
       {screen === "account" && <MyAccount onLogout={() => setScreen("login")} />}
+
+      {activeChallan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+          <div className="relative max-h-[90vh] w-full max-w-5xl overflow-auto rounded-[32px] border border-slate-200 bg-white p-4 shadow-2xl sm:p-6">
+            <button
+              onClick={() => setActiveChallan(null)}
+              className="absolute right-5 top-5 rounded-full border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition-colors hover:text-slate-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <ChallanPreviewCard challan={activeChallan} course={activeChallan.student.course} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
