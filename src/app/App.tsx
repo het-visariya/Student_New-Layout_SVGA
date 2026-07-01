@@ -1,11 +1,11 @@
-import { useState, useRef, useMemo, type ChangeEvent } from "react";
+import { useState, useRef, useMemo, useEffect, type ChangeEvent } from "react";
 import { motion } from "motion/react";
 import {
-  BookOpen, User, LayoutDashboard, Search, Check, Download,
+  Bell, BookOpen, User, LayoutDashboard, Search, Check, Download,
   CheckCircle, LogOut, CreditCard, Smartphone, Camera, X,
   Shield, Clock, BookMarked, FileText, ChevronRight, Wallet,
   Settings, RefreshCw, Library, QrCode, ChevronDown, Upload,
-  Trash2, Pencil, Eye,
+  Trash2, Pencil, Eye, Info, AlertTriangle, XCircle,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,7 +41,215 @@ type RequestItem = {
   challan: RequestChallan | null;
 };
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+type NotificationType = "info" | "success" | "warning" | "error" | "processing";
+
+type NotificationItem = {
+  id: string;
+  type: NotificationType;
+  title: string;
+  description: string;
+  requestId: string | null;
+  status: string;
+  timestamp: string;
+  unread: boolean;
+  actionLabel?: string;
+  actionType?: "view-challan";
+};
+
+const NOTIFICATION_META: Record<NotificationType, { icon: React.ReactNode; accent: string; badge: string }> = {
+  info: { icon: <Info className="w-4 h-4" />, accent: "text-sky-600 bg-sky-50 border-sky-100", badge: "text-sky-700 bg-sky-100 border-sky-200" },
+  success: { icon: <CheckCircle className="w-4 h-4" />, accent: "text-emerald-600 bg-emerald-50 border-emerald-100", badge: "text-emerald-700 bg-emerald-100 border-emerald-200" },
+  warning: { icon: <AlertTriangle className="w-4 h-4" />, accent: "text-amber-600 bg-amber-50 border-amber-100", badge: "text-amber-700 bg-amber-100 border-amber-200" },
+  error: { icon: <XCircle className="w-4 h-4" />, accent: "text-red-600 bg-red-50 border-red-100", badge: "text-red-700 bg-red-100 border-red-200" },
+  processing: { icon: <RefreshCw className="w-4 h-4 animate-spin" />, accent: "text-violet-600 bg-violet-50 border-violet-100", badge: "text-violet-700 bg-violet-100 border-violet-200" },
+};
+
+function formatUnreadCount(count: number) {
+  if (count > 99) return "99+";
+  return String(count);
+}
+
+function NotificationBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="absolute -top-1 -right-1 inline-flex min-w-[1.35rem] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+      {formatUnreadCount(count)}
+    </span>
+  );
+}
+
+function NotificationEmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 rounded-[26px] border border-slate-200 bg-white/90 p-12 text-center shadow-sm shadow-slate-100">
+      <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-blue-50 text-blue-600 shadow-inner">
+        <Bell className="h-10 w-10" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-lg font-extrabold text-slate-800">No Notifications Yet</h3>
+        <p className="text-sm text-slate-500 max-w-xs">
+          We'll notify you whenever there's an update on your book requests.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function NotificationCard({
+  notification,
+  onView,
+  onMarkRead,
+  onDelete,
+}: {
+  notification: NotificationItem;
+  onView: (item: NotificationItem) => void;
+  onMarkRead: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const meta = NOTIFICATION_META[notification.type];
+  return (
+    <div className={`group rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md`}>
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 flex h-11 w-11 items-center justify-center rounded-2xl border ${meta.accent}`}>
+          {meta.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h4 className="truncate text-sm font-bold text-slate-900">{notification.title}</h4>
+              <p className="mt-1 text-sm text-slate-500">{notification.description}</p>
+            </div>
+            {notification.unread && <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-blue-600" />}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+            {notification.requestId && <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold">{notification.requestId}</span>}
+            <span className={
+              `rounded-full border px-2.5 py-1 font-semibold ${meta.badge}`
+            }>{notification.status}</span>
+            <span>{notification.timestamp}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {notification.actionType === "view-challan" && (
+          <button
+            onClick={() => onView(notification)}
+            className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+          >
+            {notification.actionLabel ?? "View Challan"}
+          </button>
+        )}
+        <button
+          onClick={() => onMarkRead(notification.id)}
+          className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100"
+        >
+          Mark as Read
+        </button>
+        <button
+          onClick={() => onDelete(notification.id)}
+          className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NotificationDrawer({
+  notifications,
+  open,
+  onClose,
+  onViewNotification,
+  onMarkRead,
+  onDelete,
+  onMarkAllRead,
+  onClearAll,
+}: {
+  notifications: NotificationItem[];
+  open: boolean;
+  onClose: () => void;
+  onViewNotification: (notification: NotificationItem) => void;
+  onMarkRead: (id: string) => void;
+  onDelete: (id: string) => void;
+  onMarkAllRead: () => void;
+  onClearAll: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const handleClickOutside = (event: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, onClose]);
+
+  return (
+    <div className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}>
+      <div className={`absolute inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity ${open ? "opacity-100" : "opacity-0"}`} />
+      <motion.div
+        ref={panelRef}
+        initial={{ opacity: 0, x: 80 }}
+        animate={{ opacity: open ? 1 : 0, x: open ? 0 : 80 }}
+        transition={{ duration: 0.28, ease: "easeOut" }}
+        className="absolute right-0 top-0 h-full w-full max-w-md bg-slate-50 shadow-2xl border-l border-slate-200 overflow-y-auto"
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-5">
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-900">Notifications</h2>
+              <p className="text-sm text-slate-500">Updates about your borrowing requests and challans.</p>
+            </div>
+            <button onClick={onClose} className="rounded-full border border-slate-200 bg-slate-100 p-2 text-slate-600 hover:bg-slate-200">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{notifications.filter((item) => item.unread).length} unread</span>
+              <span className="text-sm text-slate-500">{notifications.length} total</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onMarkAllRead} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100">
+                Mark all as read
+              </button>
+              <button onClick={onClearAll} className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100">
+                Clear all
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-4 overflow-y-auto p-5">
+            {notifications.length === 0 ? (
+              <NotificationEmptyState />
+            ) : (
+              notifications.map((notification) => (
+                <NotificationCard
+                  key={notification.id}
+                  notification={notification}
+                  onView={(item) => onViewNotification(item)}
+                  onMarkRead={onMarkRead}
+                  onDelete={onDelete}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 const STUDENT = {
   name: "Rahul Sharma",
   id: "SVGA2024001",
@@ -302,7 +510,7 @@ function StepBar({ step, labels }: { step: RegStep; labels: string[] }) {
   );
 }
 
-function NavBar({ active, onNav }: { active: Screen; onNav: (s: Screen) => void }) {
+function NavBar({ active, onNav, unreadCount, onToggleNotifications }: { active: Screen; onNav: (s: Screen) => void; unreadCount: number; onToggleNotifications: () => void }) {
   const links: { key: Screen; label: string; icon: React.ReactNode }[] = [
     { key: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
     { key: "browse", label: "Browse Books", icon: <BookOpen className="w-4 h-4" /> },
@@ -330,6 +538,14 @@ function NavBar({ active, onNav }: { active: Screen; onNav: (s: Screen) => void 
           ))}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleNotifications}
+            className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          >
+            <Bell className="h-5 w-5" />
+            <NotificationBadge count={unreadCount} />
+            <span className="absolute inset-0 rounded-2xl bg-blue-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
+          </button>
           <div className="hidden sm:block text-right">
             <div className="text-sm font-bold text-slate-800 leading-tight">{STUDENT.name}</div>
             <div className="text-[11px] text-slate-400 font-medium">{STUDENT.id}</div>
@@ -1821,21 +2037,71 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("login");
   const [requests, setRequests] = useState<RequestItem[]>(INITIAL_REQUESTS);
   const [activeChallan, setActiveChallan] = useState<RequestChallan | null>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const isPostAuth = ["dashboard", "browse", "requests", "account"].includes(screen);
+
+  const unreadCount = notifications.filter((item) => item.unread).length;
 
   const handleRegistrationComplete = () => {
     setScreen("dashboard");
     setActiveChallan(null);
   };
 
+  const addNotification = (notification: NotificationItem) => {
+    setNotifications((current) => [notification, ...current]);
+  };
+
   const handleRequestCreated = (request: RequestItem) => {
     setRequests((current) => [request, ...current]);
     setActiveChallan(request.challan);
+    if (request.challan) {
+      addNotification({
+        id: `notif-${Date.now()}`,
+        type: "success",
+        title: "📚 Challan Generated Successfully",
+        description: "Your book request has been submitted successfully.",
+        requestId: request.requestId,
+        status: "Pending Approval",
+        timestamp: "Just Now",
+        unread: true,
+        actionLabel: "View Challan",
+        actionType: "view-challan",
+      });
+    }
   };
+
+  const handleViewNotification = (notification: NotificationItem) => {
+    if (notification.actionType === "view-challan") {
+      setActiveChallan(requests.find((r) => r.requestId === notification.requestId)?.challan ?? null);
+    }
+    setNotifications((current) =>
+      current.map((item) => (item.id === notification.id ? { ...item, unread: false } : item))
+    );
+    setNotificationOpen(false);
+  };
+
+  const handleMarkRead = (id: string) => {
+    setNotifications((current) => current.map((item) => (item.id === id ? { ...item, unread: false } : item)));
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    setNotifications((current) => current.filter((item) => item.id !== id));
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications((current) => current.map((item) => ({ ...item, unread: false })));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
+
+  const toggleNotifications = () => setNotificationOpen((open) => !open);
 
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      {isPostAuth && <NavBar active={screen} onNav={setScreen} />}
+      {isPostAuth && <NavBar active={screen} onNav={setScreen} unreadCount={unreadCount} onToggleNotifications={toggleNotifications} />}
 
       {screen === "login" && <LoginScreen onNext={() => setScreen("register")} />}
       {screen === "register" && <RegistrationScreen onComplete={handleRegistrationComplete} />}
@@ -1843,6 +2109,17 @@ export default function App() {
       {screen === "browse" && <BrowseBooks onRequestCreated={handleRequestCreated} />}
       {screen === "requests" && <MyRequests requests={requests} onViewChallan={setActiveChallan} />}
       {screen === "account" && <MyAccount onLogout={() => setScreen("login")} />}
+
+      <NotificationDrawer
+        notifications={notifications}
+        open={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        onViewNotification={handleViewNotification}
+        onMarkRead={handleMarkRead}
+        onDelete={handleDeleteNotification}
+        onMarkAllRead={handleMarkAllRead}
+        onClearAll={handleClearAll}
+      />
 
       {activeChallan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
