@@ -4,7 +4,7 @@ import {
   BookOpen, User, LayoutDashboard, Search, Check, Download,
   CheckCircle, LogOut, CreditCard, Smartphone, Camera, X,
   Shield, Clock, BookMarked, FileText, ChevronRight, Wallet,
-  Settings, RefreshCw, Library, QrCode,
+  Settings, RefreshCw, Library, QrCode, ChevronDown,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -403,66 +403,155 @@ function RegistrationScreen({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function FieldInput({ label, placeholder, type = "text", options, span }: { label: string; placeholder: string; type?: string; options?: string[]; span?: number }) {
-  const cls = "w-full px-4 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm";
+function FieldInput({
+  label,
+  placeholder,
+  type = "text",
+  options,
+  span,
+  value,
+  onChange,
+  readOnly = false,
+  disabled = false,
+  required = true,
+  inputMode,
+  maxLength,
+  pattern,
+  defaultValue,
+}: {
+  label: string;
+  placeholder: string;
+  type?: string;
+  options?: string[];
+  span?: number;
+  value?: string;
+  onChange?: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  readOnly?: boolean;
+  disabled?: boolean;
+  required?: boolean;
+  inputMode?: string;
+  maxLength?: number;
+  pattern?: string;
+  defaultValue?: string;
+}) {
+  const cls = "w-full px-4 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200";
   return (
-    <div className={span === 2 ? "col-span-2" : ""}>
+    <div className={span === 2 ? "sm:col-span-2" : ""}>
       <label className="block text-sm font-bold text-slate-700 mb-1.5">
-        {label} <span className="text-blue-300 font-normal">*</span>
+        {label}
+        {required && <span className="text-blue-300 font-normal"> *</span>}
       </label>
       {type === "select" ? (
-        <select className={cls}>
-          <option value="">{placeholder}</option>
-          {options?.map((o) => <option key={o}>{o}</option>)}
-        </select>
+        <div className="relative">
+          <select value={value} onChange={onChange} disabled={disabled} className={`${cls} appearance-none pr-10`} defaultValue={defaultValue}>
+            <option value="">{placeholder}</option>
+            {options?.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        </div>
       ) : type === "textarea" ? (
-        <textarea rows={3} placeholder={placeholder} className={`${cls} resize-none`} />
+        <textarea
+          rows={3}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled}
+          defaultValue={defaultValue}
+          className={`${cls} resize-none`}
+        />
       ) : (
-        <input type={type} placeholder={placeholder} className={cls} />
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          pattern={pattern}
+          defaultValue={defaultValue}
+          className={cls}
+        />
       )}
     </div>
   );
 }
 
 function PersonalForm() {
+  const [surname, setSurname] = useState("");
+  const [showSurnameOther, setShowSurnameOther] = useState(false);
+  const [occupation, setOccupation] = useState("");
+  const [showOccupationOther, setShowOccupationOther] = useState(false);
+  const [manualSurname, setManualSurname] = useState("");
+  const [manualOccupation, setManualOccupation] = useState("");
+  const [nativeVillage, setNativeVillage] = useState("");
+  const [parentsContact, setParentsContact] = useState("");
+  const [currentResidence, setCurrentResidence] = useState("");
+
+  const surnameOptions = ["Bauva", "Buricha", "Charla", "Chhadwa", "Chheda", "Dagha", "Dedhia", "Furiya", "Gada", "Gala", "Gindra", "Gogri", "Karia", "Khirani-Gala", "Khuthia", "Mamania", "Mota", "Nandu", "Nisar", "Rambhia", "Rita", "Satra", "Savla", "Shah", "Vadhan", "Visaria", "Vora", "Other"];
+  const occupationOptions = ["Student", "Part-time Job", "Freelancer", "Business", "Service / Employment", "Other"];
+  const villageOptions = ["Adhoi", "Bhachau", "Bharudia", "Gagodar", "Ghanithar", "Halra", "Kakrava", "Kharoi", "Lakadiya", "Manafra", "Nandasar", "N. Trambo", "Rav", "Samkhiyari", "Shivlakha", "Suvai", "Thoriyari", "Trambo", "Vanoi"];
+
   return (
     <div>
       <h2 className="text-xl font-extrabold text-slate-800 mb-1">Personal Details</h2>
       <p className="text-slate-400 text-sm mb-6">Enter your details as per official documents</p>
-      <div className="grid grid-cols-2 gap-4">
-        <FieldInput label="Email Address" placeholder="rahul.sharma@email.com" type="email" span={2} />
-        <FieldInput label="First Name" placeholder="Rahul" />
-        <FieldInput label="Surname" placeholder="Sharma" />
-        <FieldInput label="Father's Name" placeholder="Suresh Sharma" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldInput label="Email Address" placeholder="rahul.sharma@email.com" type="email" value={STUDENT.email} disabled readOnly span={2} />
+        <FieldInput label="First Name" placeholder="Rahul" defaultValue="Rahul" />
+        <FieldInput label="Surname" placeholder="Select surname" type="select" options={surnameOptions} value={surname} onChange={(e) => {
+          const nextValue = e.target.value;
+          setSurname(nextValue);
+          setShowSurnameOther(nextValue === "Other");
+          if (nextValue !== "Other") setManualSurname("");
+        }} required={false} />
+        {showSurnameOther && <FieldInput label="Enter Surname" placeholder="Enter your surname" value={manualSurname} onChange={(e) => setManualSurname(e.target.value)} required={showSurnameOther} span={2} />}
+        <FieldInput label="Father's / Husband's Name" placeholder="Suresh Sharma" />
         <FieldInput label="Grandfather's Name" placeholder="Ram Sharma" />
         <FieldInput label="Official Surname (if different)" placeholder="Optional" span={2} />
-        <FieldInput label="Aadhaar Number" placeholder="XXXX XXXX XXXX" />
-        <FieldInput label="Mobile Number" placeholder="9876543210" />
+        <FieldInput label="Aadhaar Number" placeholder="XXXX XXXX XXXX" value={STUDENT.aadhaar} disabled readOnly />
+        <FieldInput label="Mobile Number" placeholder="9876543210" value={STUDENT.mobile} disabled readOnly />
         <FieldInput label="Date of Birth" placeholder="" type="date" />
         <FieldInput label="Gender" placeholder="Select gender" type="select" options={["Male", "Female", "Other", "Prefer not to say"]} />
-        <FieldInput label="Occupation" placeholder="Student" />
-        <FieldInput label="Additional Information" placeholder="Any notes or special requirements" type="textarea" span={2} />
+        <FieldInput label="Occupation" placeholder="Select occupation" type="select" options={occupationOptions} value={occupation} onChange={(e) => {
+          const nextValue = e.target.value;
+          setOccupation(nextValue);
+          setShowOccupationOther(nextValue === "Other");
+          if (nextValue !== "Other") setManualOccupation("");
+        }} />
+        {showOccupationOther && <FieldInput label="Specify Occupation" placeholder="Enter your occupation" value={manualOccupation} onChange={(e) => setManualOccupation(e.target.value)} required={showOccupationOther} span={2} />}
+        <FieldInput label="Native Place / Village" placeholder="Select village" type="select" options={villageOptions} value={nativeVillage} onChange={(e) => setNativeVillage(e.target.value)} />
+        <FieldInput label="Parents Contact Number" placeholder="9876543210" type="tel" inputMode="numeric" maxLength={10} pattern="[0-9]{10}" value={parentsContact} onChange={(e) => setParentsContact(e.target.value.replace(/\D/g, "").slice(0, 10))} />
+        <FieldInput label="Where Do You Currently Live?" placeholder="Ghatkopar, Mumbai" value={currentResidence} onChange={(e) => setCurrentResidence(e.target.value)} />
       </div>
     </div>
   );
 }
 
 function AcademicForm() {
+  const [course, setCourse] = useState("");
+  const [showCourseOther, setShowCourseOther] = useState(false);
+  const [manualCourse, setManualCourse] = useState("");
+
+  const courseOptions = ["FYJC Science", "SYJC Science", "FYJC Commerce", "SYJC Commerce", "FYJC Arts", "SYJC Arts", "B.Com", "B.Sc", "BA", "BBA", "BCA", "MBBS", "BDS", "B.Pharm", "Engineering", "Diploma", "Other"];
+
   return (
     <div>
-      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Academic Details</h2>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-1">Academic Information</h2>
       <p className="text-slate-400 text-sm mb-6">Enter your academic and institutional information</p>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FieldInput label="College / Institute" placeholder="SVGA Engineering College" span={2} />
-        <FieldInput label="Course / Stream" placeholder="B.Tech Computer Science" />
-        <FieldInput label="Standard / Year" placeholder="Select year" type="select" options={["1st Year", "2nd Year", "3rd Year", "4th Year"]} />
+        <FieldInput label="Course / Stream" placeholder="Select course or stream" type="select" options={courseOptions} value={course} onChange={(e) => {
+          const nextValue = e.target.value;
+          setCourse(nextValue);
+          setShowCourseOther(nextValue === "Other");
+          if (nextValue !== "Other") setManualCourse("");
+        }} />
+        {showCourseOther && <FieldInput label="Specify Course / Stream" placeholder="Enter your course or stream" value={manualCourse} onChange={(e) => setManualCourse(e.target.value)} required={showCourseOther} span={2} />}
         <FieldInput label="Education Specialization" placeholder="Computer Science & Engineering" />
-        <FieldInput label="Enrollment Number" placeholder="SVG20CS001" />
         <FieldInput label="Academic Year" placeholder="Select year" type="select" options={["2023-24", "2024-25", "2025-26"]} />
-        <FieldInput label="Division" placeholder="Select" type="select" options={["A", "B", "C", "D"]} />
-        <FieldInput label="Roll Number" placeholder="42" />
-        <FieldInput label="Previous School / College" placeholder="Kendriya Vidyalaya No. 1" span={2} />
-        <FieldInput label="Additional Information" placeholder="Special requirements or notes" type="textarea" span={2} />
       </div>
     </div>
   );
