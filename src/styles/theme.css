@@ -128,6 +128,30 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-family);
+    background-image: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 28%), radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.08), transparent 24%);
+  }
+
+  [data-slot="select-content"] {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-slot="select-content"]::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  [data-slot="select-content"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  [data-slot="select-content"]::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c7d8ff;
+  }
+
+  [data-slot="select-content"]::-webkit-scrollbar-thumb:hover {
+    background: #9ab8ff;
   }
 
   /**

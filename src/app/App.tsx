@@ -4,12 +4,19 @@ import {
   Bell, BookOpen, User, LayoutDashboard, Search, Check, Download,
   CheckCircle, LogOut, CreditCard, Smartphone, Camera, X,
   Shield, Clock, BookMarked, FileText, ChevronRight, Wallet,
-  Settings, RefreshCw, Library, QrCode, ChevronDown, Upload,
+  Settings, RefreshCw, Library, QrCode, Upload,
   Trash2, Pencil, Eye, Info, AlertTriangle, XCircle,
 } from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "./components/ui/select";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Screen = "login" | "register" | "dashboard" | "browse" | "requests" | "account";
+type Screen = "register" | "dashboard" | "browse" | "requests" | "account";
 type RegStep = 1 | 2 | 3;
 
 type RequestChallan = {
@@ -574,126 +581,6 @@ function NavBar({ active, onNav, unreadCount, onToggleNotifications }: { active:
   );
 }
 
-// ─── Screen 1: Login ──────────────────────────────────────────────────────────
-function LoginScreen({ onNext }: { onNext: () => void }) {
-  const [otpSent, setOtpSent] = useState(false);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50/60 to-indigo-50 flex flex-col items-center justify-center px-4 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 28 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full max-w-sm"
-      >
-        {/* Brand */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-200/70 mb-4">
-            <BookOpen className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">SVGA Book Bank</h1>
-          <p className="text-slate-400 text-sm mt-1 font-medium">Student Library Portal</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-blue-100/70 border border-blue-50 p-7">
-          <h2 className="text-xl font-extrabold text-slate-800 mb-1">Student Login</h2>
-          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-            {otpSent
-              ? "Enter the 6-digit OTP sent to your registered mobile number"
-              : "Enter your Aadhaar number to receive a verification OTP"}
-          </p>
-
-          <div className="space-y-4">
-            {!otpSent ? (
-              <>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Aadhaar Number</label>
-                  <input
-                    type="text"
-                    placeholder="XXXX XXXX XXXX"
-                    maxLength={14}
-                    className="w-full px-4 py-3 bg-blue-50/70 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent transition-all text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1.5">Mobile Number</label>
-                  <div className="flex gap-2">
-                    <div className="px-3 py-3 bg-blue-50 border border-blue-100 rounded-xl text-slate-500 text-sm font-semibold select-none">
-                      +91
-                    </div>
-                    <input
-                      type="tel"
-                      placeholder="9876543210"
-                      maxLength={10}
-                      className="flex-1 px-4 py-3 bg-blue-50/70 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent transition-all text-sm"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={() => setOtpSent(true)}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all duration-200 hover:-translate-y-0.5 mt-1"
-                >
-                  Send OTP
-                </button>
-              </>
-            ) : (
-              <>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-3">Enter OTP</label>
-                  <div className="flex gap-2 justify-center">
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                      <input
-                        key={i}
-                        type="text"
-                        maxLength={1}
-                        className="w-11 h-12 text-center bg-blue-50/70 border-2 border-blue-100 rounded-xl text-slate-800 text-lg font-bold focus:outline-none focus:border-blue-400 transition-all"
-                      />
-                    ))}
-                  </div>
-                  <p className="text-center text-xs text-slate-400 mt-2.5">
-                    OTP sent to +91 98765 43210 ·{" "}
-                    <button className="text-blue-500 font-semibold hover:text-blue-600">Resend</button>
-                  </p>
-                </div>
-                <button
-                  onClick={onNext}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all duration-200 hover:-translate-y-0.5"
-                >
-                  Verify &amp; Continue
-                </button>
-                <button
-                  onClick={() => setOtpSent(false)}
-                  className="w-full py-2 text-slate-400 text-sm hover:text-blue-500 transition-colors font-medium"
-                >
-                  ← Change number
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Feature pills */}
-        <div className="flex gap-2.5 justify-center mt-6 flex-wrap">
-          {[
-            { icon: <BookOpen className="w-3.5 h-3.5" />, label: "Free Books" },
-            { icon: <Shield className="w-3.5 h-3.5" />, label: "Secure OTP" },
-            { icon: <Wallet className="w-3.5 h-3.5" />, label: "₹500 Deposit" },
-          ].map((p) => (
-            <div
-              key={p.label}
-              className="flex items-center gap-1.5 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-full px-3.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
-            >
-              <span className="text-blue-500">{p.icon}</span>
-              {p.label}
-            </div>
-          ))}
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 // ─── Screen 2–4: Registration ─────────────────────────────────────────────────
 function RegistrationScreen({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState<RegStep>(1);
@@ -803,7 +690,7 @@ function FieldInput({
   pattern?: string;
   defaultValue?: string;
 }) {
-  const cls = "w-full px-4 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200";
+  const cls = "w-full min-h-[52px] px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-[18px] text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-transparent transition-all duration-250 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed disabled:border-slate-200";
   return (
     <div className={span === 2 ? "sm:col-span-2" : ""}>
       <label className="block text-sm font-bold text-slate-700 mb-1.5">
@@ -812,11 +699,24 @@ function FieldInput({
       </label>
       {type === "select" ? (
         <div className="relative">
-          <select value={value} onChange={onChange} disabled={disabled} className={`${cls} appearance-none pr-10`} defaultValue={defaultValue}>
-            <option value="">{placeholder}</option>
-            {options?.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Select
+            value={value ?? ""}
+            onValueChange={(nextValue) =>
+              onChange?.({ target: { value: nextValue } } as unknown as ChangeEvent<HTMLSelectElement>)
+            }
+            disabled={disabled}
+          >
+            <SelectTrigger className={`${cls} pr-10`} size="default">
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent className="max-h-64 overflow-y-auto">
+              {options?.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ) : type === "textarea" ? (
         <textarea
@@ -990,6 +890,7 @@ function PhotoForm({ preview, onChange }: { preview: string | null; onChange: (e
 // ─── Modals ───────────────────────────────────────────────────────────────────
 function PaymentModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
   const [method, setMethod] = useState<"card" | "upi" | "net">("card");
+  const [selectedBank, setSelectedBank] = useState("");
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
@@ -1058,12 +959,18 @@ function PaymentModal({ onSuccess, onClose }: { onSuccess: () => void; onClose: 
         )}
         {method === "net" && (
           <div className="mb-5">
-            <select className="w-full px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm">
-              <option value="">Select your bank</option>
-              {["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "PNB", "Bank of Baroda", "Canara Bank"].map((b) => (
-                <option key={b}>{b}</option>
-              ))}
-            </select>
+            <Select value={selectedBank} onValueChange={setSelectedBank}>
+              <SelectTrigger className="w-full rounded-[18px] border border-blue-100 bg-blue-50/60 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all text-sm" size="default">
+                <SelectValue placeholder="Select your bank" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                {["SBI", "HDFC Bank", "ICICI Bank", "Axis Bank", "PNB", "Bank of Baroda", "Canara Bank"].map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -1515,23 +1422,26 @@ function BrowseBooks({ onRequestCreated }: { onRequestCreated: (request: Request
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Course / Standard</label>
                 <div className="relative">
-                  <select
-                    value={course}
-                    onChange={(e) => {
-                      setCourse(e.target.value);
-                      setStream("");
-                    }}
-                    className="w-full appearance-none rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                  >
-                    <option value="">Select course / standard</option>
+                <Select
+                  value={course}
+                  onValueChange={(nextValue) => {
+                    setCourse(nextValue);
+                    setStream("");
+                  }}
+                  className="w-full"
+                >
+                  <SelectTrigger className="w-full rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-300" size="default">
+                    <SelectValue placeholder="Select course / standard" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {courseOptions.map((option) => (
-                      <option key={option} value={option}>
+                      <SelectItem key={option} value={option}>
                         {option}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                </div>
+                  </SelectContent>
+                </Select>
+              </div>
               </div>
 
               {showStreamField && (
@@ -2034,7 +1944,7 @@ function MyAccount({ onLogout }: { onLogout: () => void }) {
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("login");
+  const [screen, setScreen] = useState<Screen>("register");
   const [requests, setRequests] = useState<RequestItem[]>(INITIAL_REQUESTS);
   const [activeChallan, setActiveChallan] = useState<RequestChallan | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -2103,12 +2013,11 @@ export default function App() {
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {isPostAuth && <NavBar active={screen} onNav={setScreen} unreadCount={unreadCount} onToggleNotifications={toggleNotifications} />}
 
-      {screen === "login" && <LoginScreen onNext={() => setScreen("register")} />}
       {screen === "register" && <RegistrationScreen onComplete={handleRegistrationComplete} />}
       {screen === "dashboard" && <DashboardScreen onNav={setScreen} requests={requests} />}
       {screen === "browse" && <BrowseBooks onRequestCreated={handleRequestCreated} />}
       {screen === "requests" && <MyRequests requests={requests} onViewChallan={setActiveChallan} />}
-      {screen === "account" && <MyAccount onLogout={() => setScreen("login")} />}
+      {screen === "account" && <MyAccount onLogout={() => setScreen("dashboard")} />}
 
       <NotificationDrawer
         notifications={notifications}
