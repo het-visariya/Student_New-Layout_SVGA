@@ -525,26 +525,44 @@ function NavBar({ active, onNav, unreadCount, onToggleNotifications }: { active:
     { key: "account", label: "Account", icon: <User className="w-4 h-4" /> },
   ];
   return (
-    <nav className="bg-white/90 backdrop-blur-md border-b border-blue-100/80 sticky top-0 z-40 shadow-sm shadow-blue-50">
-      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14">
-        <Logo compact />
-        <div className="hidden md:flex items-center gap-1">
-          {links.map((l) => (
-            <button
-              key={l.key}
-              onClick={() => onNav(l.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                active === l.key
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-              }`}
-            >
-              {l.icon}
-              {l.label}
-            </button>
-          ))}
+    <nav className="sticky top-0 z-40 border-b border-blue-100/80 bg-white/70 shadow-[0_10px_35px_rgba(15,23,42,0.04)] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
+        <div className="flex flex-1 items-center justify-start">
+          <Logo compact />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="hidden flex-1 items-center justify-center md:flex">
+          <div className="flex items-center justify-center gap-1.5 rounded-full border border-white/70 bg-white/70 p-1 shadow-[0_6px_18px_rgba(15,23,42,0.04)] backdrop-blur-[8px]">
+            {links.map((l) => {
+              const isActive = active === l.key;
+              return (
+                <motion.button
+                  key={l.key}
+                  layout
+                  onClick={() => onNav(l.key)}
+                  whileHover={{ scale: 1.01, y: -0.5 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.22, ease: "easeInOut" }}
+                  animate={{
+                    opacity: isActive ? 1 : 0.96,
+                    backgroundColor: isActive ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
+                    boxShadow: isActive ? "0 6px 14px rgba(59,130,246,0.08)" : "0 0 0 rgba(0,0,0,0)",
+                    y: isActive ? -0.5 : 0,
+                    scale: isActive ? 1 : 0.99,
+                  }}
+                  className={`group relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-semibold transition-[background-color,transform,box-shadow,opacity] duration-200 ${
+                    isActive
+                      ? "border-blue-100/80 text-blue-700 backdrop-blur-[8px]"
+                      : "border-transparent text-slate-500 hover:border-white/70 hover:bg-white/70 hover:text-slate-800"
+                  }`}
+                >
+                  <span className="transition-transform duration-200 group-hover:scale-105">{l.icon}</span>
+                  {l.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex flex-1 items-center justify-end gap-3">
           <button
             onClick={onToggleNotifications}
             className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
@@ -554,21 +572,21 @@ function NavBar({ active, onNav, unreadCount, onToggleNotifications }: { active:
             <span className="absolute inset-0 rounded-2xl bg-blue-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
           <div className="hidden sm:block text-right">
-            <div className="text-sm font-bold text-slate-800 leading-tight">{STUDENT.name}</div>
-            <div className="text-[11px] text-slate-400 font-medium">{STUDENT.id}</div>
+            <div className="text-sm font-bold leading-tight text-slate-800">{STUDENT.name}</div>
+            <div className="text-[11px] font-medium text-slate-400">{STUDENT.id}</div>
           </div>
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-            <User className="w-4 h-4 text-blue-600" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+            <User className="h-4 w-4 text-blue-600" />
           </div>
         </div>
       </div>
       {/* Mobile tab row */}
-      <div className="md:hidden flex border-t border-blue-50 px-1 py-0.5">
+      <div className="flex border-t border-blue-50 px-1 py-0.5 md:hidden">
         {links.map((l) => (
           <button
             key={l.key}
             onClick={() => onNav(l.key)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors ${
+            className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors ${
               active === l.key ? "text-blue-600" : "text-slate-400"
             }`}
           >
@@ -1261,6 +1279,11 @@ function BrowseBooks({ onRequestCreated }: { onRequestCreated: (request: Request
     setSelectedLibraryBooks((current) => (current.includes(id) ? current.filter((bookId) => bookId !== id) : [...current, id]));
   };
 
+  const handleAddLibraryBook = (id: string) => {
+    setSelectedLibraryBooks((current) => (current.includes(id) ? current : [...current, id]));
+    setBookSearch("");
+  };
+
   const resetRequestForm = () => {
     setRequestForm({ title: "", author: "", edition: "", publisher: "", notes: "", imageName: "" });
     setEditingRequestId(null);
@@ -1376,23 +1399,23 @@ function BrowseBooks({ onRequestCreated }: { onRequestCreated: (request: Request
   const canGenerate = selectedLibraryBooks.length > 0 || specialRequests.length > 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Select Books</h1>
-          <p className="text-slate-400 text-sm mt-1">Search for books and build your borrowing request.</p>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className={`mb-6 flex items-center ${step === 1 ? "justify-center text-center" : "justify-between"} gap-3`}>
+        <div className={step === 1 ? "text-center" : ""}>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-800">Select Books</h1>
+          <p className="mt-1 text-sm text-slate-400">Search for books and build your borrowing request.</p>
         </div>
         {step === 2 && (
           <button
             onClick={handleChangeCourse}
-            className="px-4 py-2 rounded-xl border border-blue-200 text-sm font-bold text-blue-700 hover:bg-blue-50 transition-colors"
+            className="rounded-xl border border-blue-200 px-4 py-2 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-50"
           >
             Change Course
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-8">
+      <div className={`mb-8 flex flex-wrap items-center gap-2 ${step === 1 ? "justify-center" : ""}`}>
         {[
           { label: "Step 1", sub: "Select Course" },
           { label: "Step 2", sub: "Choose Books" },
@@ -1411,13 +1434,13 @@ function BrowseBooks({ onRequestCreated }: { onRequestCreated: (request: Request
       </div>
 
       {step === 1 ? (
-        <div className="bg-white rounded-3xl border border-blue-50 shadow-sm p-6 sm:p-8">
-          <div className="max-w-xl">
-            <div className="mb-6">
-              <h2 className="text-xl font-extrabold text-slate-800">Select Course</h2>
-              <p className="text-slate-400 text-sm mt-1">Choose your course and stream to continue.</p>
-            </div>
+        <div className="flex flex-col items-center">
+          <div className="mb-6 flex w-full max-w-2xl flex-col items-center text-center">
+            <h2 className="text-xl font-extrabold text-slate-800">Select Course</h2>
+            <p className="mt-1 text-sm text-slate-400">Choose your course and stream to continue.</p>
+          </div>
 
+          <div className="w-full max-w-xl rounded-3xl border border-blue-50 bg-white p-6 shadow-sm sm:p-8">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Course / Standard</label>
@@ -1559,7 +1582,7 @@ function BrowseBooks({ onRequestCreated }: { onRequestCreated: (request: Request
                             {book.available > 0 ? `${book.available} Available` : "Unavailable"}
                           </span>
                           <button
-                            onClick={() => toggleLibraryBook(book.id)}
+                            onClick={() => handleAddLibraryBook(book.id)}
                             className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 transition-all hover:bg-blue-50"
                           >
                             Add
